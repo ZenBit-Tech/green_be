@@ -5,36 +5,45 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
-import { UserResponseDto } from './dto/user-response.dto';
+import { AuthResponseDto } from './dto/auth-response.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  public constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
+  @Post('magic-link/request')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Register new user' })
-  @ApiCreatedResponse({ description: 'User created', type: UserResponseDto })
-  public async register(@Body() dto: LoginDto): Promise<UserResponseDto> {
-    const created = await this.authService.register(dto);
-    return created;
+  @ApiOperation({ summary: 'Request a magic link' })
+  @ApiCreatedResponse({ description: 'Magic link created and sent' })
+  @ApiBadRequestResponse({ description: 'Invalid email' })
+  public async requestMagicLink(
+    @Body() dto: RequestMagicLinkDto,
+  ): Promise<{ ok: true }> {
+    return this.authService.requestMagicLink(dto);
   }
 
-  @Get('all')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get all users' })
-  @ApiOkResponse({ description: 'List of users', type: [UserResponseDto] })
-  public async findAll(): Promise<UserResponseDto[]> {
-    return this.authService.findAll();
+  @Get('magic-link/consume')
+  @ApiOperation({ summary: 'Consume magic link token and get JWT' })
+  @ApiOkResponse({
+    description: 'Auth response (token + user)',
+    type: AuthResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid or expired token' })
+  public async consumeMagicLink(
+    @Query('token') token: string,
+  ): Promise<AuthResponseDto> {
+    return this.authService.consumeMagicLink(token);
   }
 }
