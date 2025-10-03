@@ -10,9 +10,6 @@ export class UserEntity {
   @Column()
   public email: string;
 
-  @Column({ nullable: true })
-  public displayName?: string;
-
   @Column({ default: ROLES.USER })
   public role: string;
 

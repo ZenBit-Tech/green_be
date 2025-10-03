@@ -23,6 +23,7 @@ import { EmailService } from '@common/services/email.service';
 import { JwtService as NestJwtService } from '@nestjs/jwt';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
 
 @Injectable()
 export class AuthService {
@@ -43,13 +44,12 @@ export class AuthService {
     const dto = new UserResponseDto();
     dto.id = user.id;
     dto.email = user.email;
-    dto.displayName = user.displayName;
     return dto;
   }
 
   public async requestMagicLink(
     dto: RequestMagicLinkDto,
-  ): Promise<{ ok: true }> {
+  ): Promise<ResponseMagicLinkDto> {
     try {
       const token = uuidv4();
       const nowSeconds = Math.floor(Date.now() / 1000);
@@ -87,7 +87,7 @@ export class AuthService {
         expiresInSeconds: expirySeconds,
       });
 
-      return { ok: true };
+      return { success: true };
     } catch (err) {
       this.logger.error('requestMagicLink failed', (err as Error).message);
       throw new InternalServerErrorException(

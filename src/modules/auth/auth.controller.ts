@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -17,6 +16,7 @@ import {
 import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
 import { AuthService } from './auth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -26,12 +26,16 @@ export class AuthController {
   @Post('magic-link/request')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request a magic link' })
-  @ApiCreatedResponse({ description: 'Magic link created and sent' })
+  @ApiOkResponse({
+    description: 'Magic link was successfully sent',
+    type: ResponseMagicLinkDto,
+  })
   @ApiBadRequestResponse({ description: 'Invalid email' })
   public async requestMagicLink(
     @Body() dto: RequestMagicLinkDto,
-  ): Promise<{ ok: true }> {
-    return this.authService.requestMagicLink(dto);
+  ): Promise<ResponseMagicLinkDto> {
+    await this.authService.requestMagicLink(dto);
+    return { success: true };
   }
 
   @Get('magic-link/consume')

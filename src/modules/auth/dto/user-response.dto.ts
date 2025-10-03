@@ -6,7 +6,4 @@ export class UserResponseDto {
 
   @ApiProperty({ example: 'alice@example.com' })
   public email: string;
-
-  @ApiProperty({ example: 'Alice', required: false })
-  public displayName?: string;
 }
