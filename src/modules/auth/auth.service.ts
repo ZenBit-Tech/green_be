@@ -9,10 +9,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { JwtService as NestJwtService } from '@nestjs/jwt';
 import { v4 as uuidv4 } from 'uuid';
-import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
-import { MagicLinkTokenEntity } from './entities/magic-link-token.entity';
-import { UserEntity } from './entities/user.entity';
 import {
   magicLinkExpirySeconds,
   jwtExpiresDefaultSeconds,
@@ -20,10 +18,12 @@ import {
   emailFromEnvKey,
 } from '@common/constants/app.constants';
 import { EmailService } from '@common/services/email.service';
-import { JwtService as NestJwtService } from '@nestjs/jwt';
+import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
+import { MagicLinkTokenEntity } from './entities/magic-link-token.entity';
+import { UserEntity } from './entities/user.entity';
 
 @Injectable()
 export class AuthService {
