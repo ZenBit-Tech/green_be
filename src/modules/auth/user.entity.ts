@@ -15,7 +15,7 @@ export class UserEntity {
   username: string;
 
   @Column()
-  @Exclude() // Do not return in API responses
+  @Exclude()
   password: string;
 
   @Column({ nullable: true })

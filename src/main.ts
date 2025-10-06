@@ -34,5 +34,4 @@ async function bootstrap() {
   console.log(`📚 Swagger docs: http://localhost:${port}/api`);
 }
 
-// Исправили floating promise
 void bootstrap();

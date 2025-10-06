@@ -33,7 +33,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     JwtRefreshStrategy,
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard, // Global JWT guard
+      useClass: JwtAuthGuard,
     },
   ],
   exports: [AuthService],
