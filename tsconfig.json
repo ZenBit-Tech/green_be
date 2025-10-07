@@ -18,9 +18,11 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": false,
-    
     "paths": {
-      "@module/*": ["src/modules/*"]
+      "@/*": ["src/*"],
+      "@types/*": ["src/types/*"],
+      "@modules/*": ["src/modules/*"],
+      "@common/*": ["src/common/*"]
     }
   }
 }

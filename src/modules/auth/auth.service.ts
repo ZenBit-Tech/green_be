@@ -7,17 +7,16 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { ConfigService } from '@nestjs/config';
 import { LoginDto } from './dto/login.dto';
 import { UserEntity } from './user.entity';
 import { AuthResponseDto } from './dto/auth-response.dto';
-import { UserResponseDto } from './dto/user-response.dto';
-import { ConfigService } from '@nestjs/config';
-
 import { JwtPayload } from '../../types/jwt-payload.interface';
 
 /**
  * Authentication service
- * Handles user authentication, registration, and token management
+ * Provides JWT token management and authentication infrastructure
+ * for all authentication methods (OAuth, Magic Link, etc.)
  */
 @Injectable()
 export class AuthService {
@@ -31,9 +30,10 @@ export class AuthService {
   ) {}
 
   /**
-   * Register a new user
+   * Register a new user (TEMPORARY - for testing JWT infrastructure)
+   * TODO: Remove in production - users will authenticate via OAuth/Magic Link
    * @param loginDto - User credentials
-   * @returns Authentication response with tokens
+   * @returns Authentication response with JWT tokens
    * @throws ConflictException if username already exists
    */
   public async register(loginDto: LoginDto): Promise<AuthResponseDto> {
@@ -74,9 +74,10 @@ export class AuthService {
   }
 
   /**
-   * Login existing user
+   * Login existing user (TEMPORARY - for testing JWT infrastructure)
+   * TODO: Remove in production - users will authenticate via OAuth/Magic Link
    * @param loginDto - User credentials
-   * @returns Authentication response with tokens
+   * @returns Authentication response with JWT tokens
    * @throws UnauthorizedException if credentials are invalid
    */
   public async login(loginDto: LoginDto): Promise<AuthResponseDto> {
@@ -115,6 +116,7 @@ export class AuthService {
 
   /**
    * Refresh access and refresh tokens
+   * Used by ALL authentication methods (OAuth, Magic Link, etc.)
    * @param refreshToken - Current refresh token
    * @returns New access and refresh tokens
    * @throws UnauthorizedException if token is invalid or expired
@@ -123,12 +125,10 @@ export class AuthService {
     refreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     try {
-      // Verify and decode refresh token with explicit type
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
 
-      // Find user by ID from token payload
       const user = await this.userRepo.findOne({
         where: { id: payload.sub },
       });
@@ -141,10 +141,8 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      // Generate new tokens
       const tokens = await this.generateTokens(user);
 
-      // Update refresh token in database
       await this.userRepo.update(user.id, {
         refreshToken: tokens.refreshToken,
       });
@@ -154,7 +152,6 @@ export class AuthService {
         refreshToken: tokens.refreshToken,
       };
     } catch {
-      // Catch block without unused variable
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
@@ -162,6 +159,7 @@ export class AuthService {
   /**
    * Logout user
    * Removes refresh token from database
+   * Used by ALL authentication methods
    * @param userId - User ID to logout
    * @returns Success message
    */
@@ -171,44 +169,16 @@ export class AuthService {
   }
 
   /**
-   * Get user profile by ID
-   * @param userId - User ID
-   * @returns User profile data
-   * @throws UnauthorizedException if user not found
-   */
-  public async getProfile(userId: string): Promise<UserResponseDto> {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    return {
-      id: user.id,
-      username: user.username,
-    };
-  }
-
-  /**
-   * Get all users
-   * Demo endpoint - should be removed in production
-   * @returns List of all users
-   */
-  public async getAllUsers(): Promise<UserResponseDto[]> {
-    const users = await this.userRepo.find();
-
-    return users.map((user) => ({
-      id: user.id,
-      username: user.username,
-    }));
-  }
-
-  /**
    * Generate JWT access and refresh tokens
+   * Core method used by ALL authentication methods:
+   * - OAuth (Google, Facebook) will call this after user verification
+   * - Magic Link will call this after email verification
+   * - Traditional login (temporary) uses this
+   *
    * @param user - User entity
    * @returns Object with access and refresh tokens
    */
-  private async generateTokens(
+  public async generateTokens(
     user: UserEntity,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const payload: JwtPayload = {
@@ -229,4 +199,38 @@ export class AuthService {
 
     return { accessToken, refreshToken };
   }
+
+  /**
+   * Find or create user by OAuth provider
+   * Will be used by Google OAuth and Facebook OAuth strategies
+   *
+   * @param provider - OAuth provider name (google, facebook)
+   * @param providerId - User ID from OAuth provider
+   * @param email - User email from OAuth provider
+   * @returns User entity
+   *
+   * TODO: Implement in Sprint 2 when adding OAuth
+   */
+  // public async findOrCreateOAuthUser(
+  //   provider: string,
+  //   providerId: string,
+  //   email: string,
+  // ): Promise<UserEntity> {
+  //   // Implementation for future OAuth integration
+  // }
+
+  /**
+   * Verify magic link token and authenticate user
+   * Will be used by Magic Link strategy (Den's task)
+   *
+   * @param token - Magic link token from email
+   * @returns Authentication response with JWT tokens
+   *
+   * TODO: Coordinate with Den on implementation
+   */
+  // public async verifyMagicLink(
+  //   token: string,
+  // ): Promise<AuthResponseDto> {
+  //   // Implementation for magic link (Den's task)
+  // }
 }

@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Get,
   Post,
   UseGuards,
   HttpCode,
@@ -10,7 +9,6 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
-import { UserResponseDto } from './dto/user-response.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import {
   ApiTags,
@@ -25,7 +23,18 @@ import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 
 /**
  * Authentication controller
- * Handles user registration, login, logout, token refresh, and profile retrieval
+ * Provides JWT token management endpoints for all authentication methods
+ *
+ * Current endpoints:
+ * - register/login: TEMPORARY - for testing JWT infrastructure
+ * - refresh: Used by ALL auth methods (OAuth, Magic Link)
+ * - logout: Used by ALL auth methods
+ *
+ * Future OAuth endpoints (Sprint 2):
+ * - GET /auth/google - Initiate Google OAuth
+ * - GET /auth/google/callback - Google OAuth callback
+ * - GET /auth/facebook - Initiate Facebook OAuth
+ * - GET /auth/facebook/callback - Facebook OAuth callback
  */
 @ApiTags('Authentication')
 @Controller('auth')
@@ -33,14 +42,19 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   /**
-   * Register a new user
+   * Register a new user (TEMPORARY - for JWT infrastructure testing)
+   * TODO: Remove in production - users authenticate via OAuth/Magic Link
    * @param loginDto - User credentials (username and password)
    * @returns Authentication response with JWT tokens
    */
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Register a new user' })
+  @ApiOperation({
+    summary: 'Register a new user (TEMPORARY - for testing)',
+    description:
+      'This endpoint is temporary and used only for testing JWT infrastructure. In production, users will authenticate via OAuth (Google, Facebook) or Magic Link.',
+  })
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'User successfully registered',
@@ -55,14 +69,19 @@ export class AuthController {
   }
 
   /**
-   * Login existing user
+   * Login existing user (TEMPORARY - for JWT infrastructure testing)
+   * TODO: Remove in production - users authenticate via OAuth/Magic Link
    * @param loginDto - User credentials (username and password)
    * @returns Authentication response with JWT tokens
    */
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login user' })
+  @ApiOperation({
+    summary: 'Login user (TEMPORARY - for testing)',
+    description:
+      'This endpoint is temporary and used only for testing JWT infrastructure. In production, users will authenticate via OAuth (Google, Facebook) or Magic Link.',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'User successfully logged in',
@@ -78,6 +97,7 @@ export class AuthController {
 
   /**
    * Refresh access and refresh tokens
+   * Used by ALL authentication methods (OAuth, Magic Link, etc.)
    * @param refreshTokenDto - Current refresh token
    * @returns New access and refresh tokens
    */
@@ -85,7 +105,11 @@ export class AuthController {
   @UseGuards(JwtRefreshAuthGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description:
+      'Generates new access and refresh tokens. Works for all authentication methods.',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Tokens successfully refreshed',
@@ -109,13 +133,18 @@ export class AuthController {
   /**
    * Logout current user
    * Removes refresh token from database
+   * Used by ALL authentication methods
    * @param user - Current authenticated user from JWT
    * @returns Success message
    */
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Logout user' })
+  @ApiOperation({
+    summary: 'Logout user',
+    description:
+      'Logs out user by removing refresh token. Works for all authentication methods.',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'User successfully logged out',
@@ -135,43 +164,25 @@ export class AuthController {
     return await this.authService.logout(user.id);
   }
 
-  /**
-   * Get current user profile
-   * @param user - Current authenticated user from JWT
-   * @returns User profile data
-   */
-  @Get('profile')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User profile retrieved successfully',
-    type: UserResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized',
-  })
-  public async getProfile(
-    @CurrentUser() user: UserEntity,
-  ): Promise<UserResponseDto> {
-    return await this.authService.getProfile(user.id);
-  }
+  // Future OAuth endpoints (Sprint 2):
 
   /**
-   * Get all users (demo endpoint)
-   * Public endpoint for testing purposes
-   * @returns List of all users
+   * Initiate Google OAuth flow
+   * TODO: Implement in Sprint 2
    */
-  @Public()
-  @Get('all')
-  @ApiOperation({ summary: 'Get all users (demo endpoint)' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'List of all users',
-    type: [UserResponseDto],
-  })
-  public async getAllUsers(): Promise<UserResponseDto[]> {
-    return await this.authService.getAllUsers();
-  }
+  // @Public()
+  // @Get('google')
+  // @UseGuards(GoogleOAuthGuard)
+  // async googleAuth() {}
+
+  /**
+   * Google OAuth callback
+   * TODO: Implement in Sprint 2
+   */
+  // @Public()
+  // @Get('google/callback')
+  // @UseGuards(GoogleOAuthGuard)
+  // async googleAuthCallback(@Req() req) {
+  //   return this.authService.generateTokens(req.user);
+  // }
 }
