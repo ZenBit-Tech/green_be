@@ -1,10 +1,10 @@
 import {
   Injectable,
-  Logger,
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -24,6 +24,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
 import { MagicLinkTokenEntity } from './entities/magic-link-token.entity';
 import { UserEntity } from './entities/user.entity';
+import { JwtPayload } from '../../types/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -127,29 +128,28 @@ export class AuthService {
           try {
             await manager.save(UserEntity, userFound);
           } catch (saveErr) {
-            console.error('User save error', (saveErr as Error).message);
+            this.logger.error('User save error', (saveErr as Error).message);
             throw new ConflictException('User creation conflict');
           }
         }
-
         await manager.delete(MagicLinkTokenEntity, { id: tokenEntity.id });
 
         return userFound;
       });
 
-      const payload = { sub: user.id, email: user.email };
+      const tokens = await this.generateTokens(user);
+
+      await this.userRepo.update(user.id, {
+        refreshToken: tokens.refreshToken,
+      });
+
       const expiresIn =
         this.configService.get<number>('JWT_EXPIRES_IN_SECONDS') ??
         jwtExpiresDefaultSeconds;
-      const jwtOptions = {
-        secret: this.configService.get<string>('JWT_SECRET'),
-        expiresIn,
-      };
-
-      const accessToken = this.jwtService.sign(payload, jwtOptions);
 
       const response: AuthResponseDto = {
-        accessToken,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         expiresIn,
         user: this.mapToUserResponse(user),
       };
@@ -159,5 +159,68 @@ export class AuthService {
       this.logger.error('consumeMagicLink failed', (err as Error).message);
       throw err;
     }
+  }
+
+  public async refresh(
+    refreshToken: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    try {
+      const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      const user = await this.userRepo.findOne({
+        where: { id: payload.sub },
+      });
+
+      if (!user || !user.refreshToken) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      if (user.refreshToken !== refreshToken) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const tokens = await this.generateTokens(user);
+
+      await this.userRepo.update(user.id, {
+        refreshToken: tokens.refreshToken,
+      });
+
+      return {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+  }
+
+  public async logout(id: string): Promise<{ message: string }> {
+    await this.userRepo.update(id, { refreshToken: null });
+    return { message: 'Logged out successfully' };
+  }
+
+  public async generateTokens(
+    user: UserEntity,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const payload: JwtPayload = {
+      sub: user.id,
+    };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_EXPIRES_IN_SECONDS'),
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>(
+          'JWT_REFRESH_EXPIRES_IN_SECONDS',
+        ),
+      }),
+    ]);
+
+    return { accessToken, refreshToken };
   }
 }

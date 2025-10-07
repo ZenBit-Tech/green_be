@@ -1,24 +1,22 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
-  Index,
   PrimaryGeneratedColumn,
+  CreateDateColumn,
 } from 'typeorm';
-import { ROLES } from '@common/constants/app.constants';
 import { Exclude } from 'class-transformer';
 
 @Entity({ name: 'users' })
 export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
-  public id: string;
+  id: string;
 
-  @Index({ unique: true })
+  @Column({ unique: true })
+  username: string;
+
   @Column()
-  public email: string;
-
-  @Column({ default: ROLES.USER })
-  public role: string;
+  @Exclude()
+  password: string;
 
   @Column({ nullable: true })
   @Exclude()
@@ -26,7 +24,4 @@ export class UserEntity {
 
   @CreateDateColumn()
   createdAt: Date;
-
-  @Column({ nullable: true })
-  public provider?: string;
 }

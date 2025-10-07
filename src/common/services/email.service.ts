@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import nodemailer, { SendMailOptions, Transporter } from 'nodemailer';
+import { SendMailOptions, Transporter } from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 
 export type MagicLinkEmailPayload = {
   to: string;
