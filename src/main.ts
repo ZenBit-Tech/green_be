@@ -1,20 +1,37 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api');
+
+  const configService = app.get(ConfigService);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   const config = new DocumentBuilder()
-    .setTitle('AI Lab API')
-    .setDescription('AI Lab API documentation')
+    .setTitle('Blood Test Analyzer API')
+    .setDescription('AI-powered blood test analysis API')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = configService.get<number>('APP_PORT') || 3000;
+  await app.listen(port);
+
+  console.log(`🚀 Application running on: http://localhost:${port}`);
+  console.log(`📚 Swagger docs: http://localhost:${port}/api`);
 }
-bootstrap();
+
+void bootstrap();
