@@ -1,12 +1,6 @@
 ## Describe your changes
 
-- Added magic link authentication flow (one-time login via email).
-- Implemented EmailService using nodemailer:
-  - Uses SMTP configuration from `.env` with fallback to Ethereal in dev.
-  - Secure: no token logged, preview URL available only in development.
-- Added request endpoint to generate and send magic link.
-- Added verification endpoint to validate token and sign in.
-- Updated DTOs and Swagger documentation for new endpoints.
+- merge conflicts fix
 
 ## Issue ticket code (and/or) and link
 
