@@ -1,10 +1,8 @@
 ## Describe your changes
 
-- merge conflicts fix
-
 ## Issue ticket code (and/or) and link
 
-- [Link to JIRA ticket](https://lizbethwangari2018.atlassian.net/browse/ALRAP-101?atlOrigin=eyJpIjoiZmE3ODU2OTRiZmIxNGEzOWFhNGUyYjcxZjNjNzVjODAiLCJwIjoiaiJ9)
+- [Link to JIRA ticket](#link here)
 
 ### **General**
 

@@ -3,8 +3,11 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { UserEntity } from './user.entity';
 
 @Entity({ name: 'magic_link_tokens' })
 export class MagicLinkTokenEntity {
@@ -15,9 +18,12 @@ export class MagicLinkTokenEntity {
   @Column()
   public token: string;
 
-  @Index({ unique: true })
   @Column()
-  public email: string;
+  userId: string;
+
+  @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user: UserEntity;
 
   @Column({ type: 'bigint' })
   public expiresAt: number;

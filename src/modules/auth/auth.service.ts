@@ -3,7 +3,6 @@ import {
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
-  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -11,20 +10,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { JwtService as NestJwtService } from '@nestjs/jwt';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  magicLinkExpirySeconds,
-  jwtExpiresDefaultSeconds,
-  backendUrlEnvKey,
-  emailFromEnvKey,
-} from '@common/constants/app.constants';
+
 import { EmailService } from '@common/services/email.service';
+import { JwtPayload } from '@app-types/jwt-payload.interface';
 import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
 import { MagicLinkTokenEntity } from './entities/magic-link-token.entity';
 import { UserEntity } from './entities/user.entity';
-import { JwtPayload } from '../../types/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -54,32 +48,48 @@ export class AuthService {
     try {
       const token = uuidv4();
       const nowSeconds = Math.floor(Date.now() / 1000);
-      const expirySeconds =
-        this.configService.get<number>('MAGIC_LINK_EXPIRY_SECONDS') ??
-        magicLinkExpirySeconds;
+      const expirySeconds = this.configService.get<number>(
+        'MAGIC_LINK_EXPIRY_SECONDS',
+      );
       const expiresAt = nowSeconds + expirySeconds;
 
       await this.dataSource.transaction(async (manager) => {
+        let userFound = await manager.findOne(UserEntity, {
+          where: { email: dto.email },
+        });
+
+        if (!userFound) {
+          userFound = manager.create(UserEntity, {
+            email: dto.email,
+            provider: 'magic_link',
+          });
+          await manager.save(UserEntity, userFound);
+        }
+
         await manager
           .createQueryBuilder()
           .delete()
           .from(MagicLinkTokenEntity)
-          .where('email = :email', { email: dto.email })
+          .where('userId = :userId', { userId: userFound.id })
           .execute();
 
         await manager
           .createQueryBuilder()
           .insert()
           .into(MagicLinkTokenEntity)
-          .values({ token, email: dto.email, expiresAt })
+          .values({
+            token,
+            userId: userFound.id,
+            expiresAt,
+          })
           .execute();
+
+        return userFound;
       });
 
-      const backendUrl =
-        this.configService.get<string>('BACKEND_URL') ?? backendUrlEnvKey;
+      const backendUrl = this.configService.get<string>('BACKEND_URL');
       const link = `${backendUrl}/auth/magic-link/consume?token=${token}`;
-      const from =
-        this.configService.get<string>('EMAIL_FROM') ?? emailFromEnvKey;
+      const from = this.configService.get<string>('EMAIL_FROM');
 
       await this.emailService.sendMagicLink({
         to: dto.email,
@@ -101,10 +111,10 @@ export class AuthService {
     try {
       const nowSeconds = Math.floor(Date.now() / 1000);
 
-      const tokenEntity = await this.tokenRepo
-        .createQueryBuilder('t')
-        .where('t.token = :token', { token })
-        .getOne();
+      const tokenEntity = await this.tokenRepo.findOne({
+        where: { token },
+        relations: ['user'],
+      });
 
       if (!tokenEntity) {
         throw new NotFoundException('Magic link not found or already used');
@@ -115,27 +125,12 @@ export class AuthService {
         throw new UnauthorizedException('Magic link expired');
       }
 
-      const user = await this.dataSource.transaction(async (manager) => {
-        let userFound = await manager.findOne(UserEntity, {
-          where: { email: tokenEntity.email },
-        });
+      const user = tokenEntity.user;
+      if (!user) {
+        throw new NotFoundException('User not found for this magic link');
+      }
 
-        if (!userFound) {
-          userFound = manager.create(UserEntity, {
-            email: tokenEntity.email,
-            provider: 'magic_link',
-          });
-          try {
-            await manager.save(UserEntity, userFound);
-          } catch (saveErr) {
-            this.logger.error('User save error', (saveErr as Error).message);
-            throw new ConflictException('User creation conflict');
-          }
-        }
-        await manager.delete(MagicLinkTokenEntity, { id: tokenEntity.id });
-
-        return userFound;
-      });
+      await this.tokenRepo.delete({ id: tokenEntity.id });
 
       const tokens = await this.generateTokens(user);
 
@@ -143,18 +138,16 @@ export class AuthService {
         refreshToken: tokens.refreshToken,
       });
 
-      const expiresIn =
-        this.configService.get<number>('JWT_EXPIRES_IN_SECONDS') ??
-        jwtExpiresDefaultSeconds;
+      const expiresIn = this.configService.get<number>(
+        'JWT_EXPIRES_IN_SECONDS',
+      );
 
-      const response: AuthResponseDto = {
+      return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         expiresIn,
         user: this.mapToUserResponse(user),
       };
-
-      return response;
     } catch (err) {
       this.logger.error('consumeMagicLink failed', (err as Error).message);
       throw err;
