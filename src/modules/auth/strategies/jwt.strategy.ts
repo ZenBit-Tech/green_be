@@ -34,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     return {
       id: payload.sub,
-      email: payload.email, // ✅ email вместо username
+      email: payload.email,
     } as User;
   }
 }

@@ -30,7 +30,6 @@ export class JwtRefreshStrategy extends PassportStrategy(
    * @returns User object attached to request
    */
   validate(payload: JwtPayload) {
-    // ✅ Убрали async - нет await операций
     if (!payload.sub || !payload.email) {
       throw new UnauthorizedException('Invalid token payload');
     }

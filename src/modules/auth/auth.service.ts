@@ -3,33 +3,42 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { User } from './user.entity';
 import { JwtPayload } from '../../types/jwt-payload.interface';
-import { UserMockRepository } from './repositories/user.mock-repository'; // ✅ Добавили
+import { UserMockRepository } from './repositories/user.mock-repository';
+import { LoginDto } from './dto/login.dto';
+import { AuthResponseDto } from './dto/auth-response.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 
-/**
- * Authentication service
- * Provides JWT token management and authentication infrastructure
- * for all authentication methods (OAuth, Magic Link, etc.)
- *
- * NOTE: Currently using UserMockRepository for testing without database
- * TODO: Replace with TypeORM Repository when database is configured
- */
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userRepo: UserMockRepository, // ✅ Используем Mock
+    private readonly userRepo: UserMockRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
-  /**
-   * Generate JWT access and refresh tokens
-   * Core method used by ALL authentication methods:
-   * - OAuth (Google, Facebook) will call this after user verification
-   * - Magic Link will call this after email verification
-   *
-   * @param user - User entity
-   * @returns Object with access and refresh tokens
-   */
+  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
+    let user = await this.userRepo.findByEmail(loginDto.email);
+
+    if (!user) {
+      user = await this.userRepo.create({
+        email: loginDto.email,
+        provider: 'email',
+      });
+    }
+
+    const tokens = await this.generateTokens(user);
+
+    await this.userRepo.update(user.id, {
+      refreshToken: tokens.refreshToken,
+    });
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: new UserResponseDto(user),
+    };
+  }
+
   async generateTokens(
     user: User,
   ): Promise<{ accessToken: string; refreshToken: string }> {
@@ -52,13 +61,6 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  /**
-   * Refresh access and refresh tokens
-   * Used by ALL authentication methods (OAuth, Magic Link, etc.)
-   * @param refreshToken - Current refresh token
-   * @returns New access and refresh tokens
-   * @throws UnauthorizedException if token is invalid or expired
-   */
   async refresh(
     refreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
@@ -67,7 +69,7 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
 
-      const user = await this.userRepo.findById(payload.sub); // ✅ Изменили на findById
+      const user = await this.userRepo.findById(payload.sub);
 
       if (!user || !user.refreshToken) {
         throw new UnauthorizedException('Invalid refresh token');
@@ -92,80 +94,16 @@ export class AuthService {
     }
   }
 
-  /**
-   * Logout user
-   * Removes refresh token from database
-   * Used by ALL authentication methods
-   * @param userId - User ID to logout
-   * @returns Success message
-   */
   async logout(userId: string): Promise<{ message: string }> {
     await this.userRepo.update(userId, { refreshToken: null });
     return { message: 'Logged out successfully' };
   }
 
-  /**
-   * Find user by email
-   * Helper method for OAuth and Magic Link authentication
-   * @param email - User email
-   * @returns User entity or null
-   */
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepo.findByEmail(email);
   }
 
-  /**
-   * Create new user
-   * Will be used by OAuth and Magic Link strategies
-   * @param userData - User data from authentication provider
-   * @returns Created user entity
-   */
   async createUser(userData: Partial<User>): Promise<User> {
     return this.userRepo.create(userData);
   }
-
-  // ========================================
-  // FUTURE IMPLEMENTATIONS (Sprint 2+)
-  // ========================================
-
-  /**
-   * Find or create user by OAuth provider
-   * TODO: Implement in Sprint 2 when adding Google/Facebook OAuth
-   *
-   * @param provider - OAuth provider name (google, facebook, linkedin)
-   * @param providerId - User ID from OAuth provider
-   * @param email - User email from OAuth provider
-   * @returns User entity
-   */
-  // async findOrCreateOAuthUser(
-  //   provider: string,
-  //   providerId: string,
-  //   email: string,
-  // ): Promise<User> {
-  //   let user = await this.userRepo.findByProvider(provider, providerId);
-  //
-  //   if (!user) {
-  //     user = await this.createUser({
-  //       email,
-  //       provider,
-  //       providerId,
-  //     });
-  //   }
-  //
-  //   return user;
-  // }
-
-  /**
-   * Verify magic link token and authenticate user
-   * TODO: Coordinate with Den on Magic Link implementation
-   *
-   * @param token - Magic link token from email
-   * @returns Authentication response with JWT tokens
-   */
-  // async verifyMagicLink(token: string): Promise<{
-  //   accessToken: string;
-  //   refreshToken: string;
-  // }> {
-  //   // Implementation by Den's team
-  // }
 }

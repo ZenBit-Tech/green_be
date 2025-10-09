@@ -32,7 +32,7 @@ import { UserMockRepository } from './repositories/user.mock-repository';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRATION'), // ✅ Исправлено
+          expiresIn: configService.get<string>('JWT_EXPIRATION'),
         },
       }),
     }),
@@ -48,6 +48,6 @@ import { UserMockRepository } from './repositories/user.mock-repository';
       useClass: JwtAuthGuard,
     },
   ],
-  exports: [AuthService, JwtModule], // ✅ Экспортируй JwtModule для других модулей
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

@@ -1,74 +1,48 @@
-import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { Public } from './decorators/public.decorator';
+import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { Request } from 'express';
+import { AuthResponseDto } from './dto/auth-response.dto';
+import { UserResponseDto } from './dto/user-response.dto';
+import { Public } from './decorators/public.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { User } from './user.entity';
+import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 
-/**
- * Authentication controller
- * Provides endpoints for JWT token management
- *
- * NOTE: Login/Register endpoints will be added by:
- * - OAuth team (Google, Facebook, LinkedIn) - Sprint 2
- * - Magic Link team (Den) - Sprint 1
- */
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  /**
-   * Refresh JWT tokens
-   * Public endpoint - no auth required
-   */
   @Public()
+  @Post('login')
+  @ApiOperation({ summary: 'User login' })
+  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
+    return this.authService.login(loginDto);
+  }
+
+  @Public()
+  @UseGuards(JwtRefreshAuthGuard)
   @Post('refresh')
-  async refresh(@Body() dto: RefreshTokenDto) {
+  @ApiOperation({ summary: 'Refresh access token' })
+  async refresh(
+    @Body() dto: RefreshTokenDto,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     return this.authService.refresh(dto.refreshToken);
   }
 
-  /**
-   * Logout current user
-   * Requires valid JWT access token
-   */
-  @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Req() req: Request) {
-    const user = req.user as { id: string };
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'User logout' })
+  async logout(@CurrentUser() user: User): Promise<{ message: string }> {
     return this.authService.logout(user.id);
   }
 
-  // ========================================
-  // FUTURE ENDPOINTS (Sprint 2+)
-  // ========================================
-
-  /**
-   * Google OAuth callback
-   * TODO: Implement in Sprint 2
-   */
-  // @Public()
-  // @Get('google')
-  // async googleAuth() {
-  //   // OAuth redirect
-  // }
-
-  /**
-   * Facebook OAuth callback
-   * TODO: Implement in Sprint 2
-   */
-  // @Public()
-  // @Get('facebook')
-  // async facebookAuth() {
-  //   // OAuth redirect
-  // }
-
-  /**
-   * Magic Link login
-   * TODO: Coordinate with Den's team
-   */
-  // @Public()
-  // @Post('magic-link')
-  // async magicLink(@Body() dto: MagicLinkDto) {
-  //   // Send magic link email
-  // }
+  @Get('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  getProfile(@CurrentUser() user: User): UserResponseDto {
+    return new UserResponseDto(user);
+  }
 }
