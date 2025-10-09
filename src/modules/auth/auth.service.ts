@@ -13,9 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { EmailService } from '@common/services/email.service';
 import { JwtPayload } from '@app-types/jwt-payload.interface';
-import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
-import { UserResponseDto } from './dto/user-response.dto';
 import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
 import { MagicLinkTokenEntity } from './entities/magic-link-token.entity';
 import { UserEntity } from './entities/user.entity';
@@ -35,15 +33,8 @@ export class AuthService {
     private readonly jwtService: NestJwtService,
   ) {}
 
-  private mapToUserResponse(user: UserEntity): UserResponseDto {
-    const dto = new UserResponseDto();
-    dto.id = user.id;
-    dto.email = user.email;
-    return dto;
-  }
-
   public async requestMagicLink(
-    dto: RequestMagicLinkDto,
+    emailAddress: string,
   ): Promise<ResponseMagicLinkDto> {
     try {
       const token = uuidv4();
@@ -55,12 +46,12 @@ export class AuthService {
 
       await this.dataSource.transaction(async (manager) => {
         let userFound = await manager.findOne(UserEntity, {
-          where: { email: dto.email },
+          where: { email: emailAddress },
         });
 
         if (!userFound) {
           userFound = manager.create(UserEntity, {
-            email: dto.email,
+            email: emailAddress,
             provider: 'magic_link',
           });
           await manager.save(UserEntity, userFound);
@@ -79,7 +70,7 @@ export class AuthService {
           .into(MagicLinkTokenEntity)
           .values({
             token,
-            userId: userFound.id,
+            user: { id: userFound.id },
             expiresAt,
           })
           .execute();
@@ -92,7 +83,7 @@ export class AuthService {
       const from = this.configService.get<string>('EMAIL_FROM');
 
       await this.emailService.sendMagicLink({
-        to: dto.email,
+        to: emailAddress,
         from,
         link,
         expiresInSeconds: expirySeconds,
@@ -146,7 +137,7 @@ export class AuthService {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         expiresIn,
-        user: this.mapToUserResponse(user),
+        user: user,
       };
     } catch (err) {
       this.logger.error('consumeMagicLink failed', (err as Error).message);

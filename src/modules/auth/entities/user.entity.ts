@@ -5,8 +5,8 @@ import {
   Index,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ROLES } from '@common/constants/app.constants';
 import { Exclude } from 'class-transformer';
+import { ROLES } from '@common/constants/app.constants';
 
 @Entity({ name: 'users' })
 export class UserEntity {

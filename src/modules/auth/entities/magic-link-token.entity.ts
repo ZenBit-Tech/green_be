@@ -18,9 +18,6 @@ export class MagicLinkTokenEntity {
   @Column()
   public token: string;
 
-  @Column()
-  userId: string;
-
   @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: UserEntity;

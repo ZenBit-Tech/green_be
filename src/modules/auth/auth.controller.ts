@@ -44,7 +44,7 @@ export class AuthController {
   public async requestMagicLink(
     @Body() dto: RequestMagicLinkDto,
   ): Promise<ResponseMagicLinkDto> {
-    await this.authService.requestMagicLink(dto);
+    await this.authService.requestMagicLink(dto.email);
     return { success: true };
   }
 
@@ -115,7 +115,6 @@ export class AuthController {
   public async logout(
     @CurrentUser() user: UserEntity,
   ): Promise<{ message: string }> {
-    console.log('Logging out user:', user);
     return await this.authService.logout(user.id);
   }
 }
