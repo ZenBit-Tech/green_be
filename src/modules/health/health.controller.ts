@@ -34,7 +34,7 @@ export class HealthController {
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
-      database: 'mock', // Изменишь, когда подключишь реальную БД
+      database: 'mock',
     };
   }
 }
