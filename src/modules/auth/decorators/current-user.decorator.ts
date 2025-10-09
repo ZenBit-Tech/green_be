@@ -1,19 +1,20 @@
-import {
-  createParamDecorator,
-  ExecutionContext,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { Request } from 'express';
-import { UserEntity } from '../user.entity';
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { User } from '../user.entity';
 
+/**
+ * Decorator to get current authenticated user from request
+ * Used in protected routes to access user data
+ *
+ * @example
+ * @Get('profile')
+ * @UseGuards(JwtAuthGuard)
+ * async getProfile(@CurrentUser() user: User) {
+ *   return user;
+ * }
+ */
 export const CurrentUser = createParamDecorator(
-  (_data: unknown, ctx: ExecutionContext): UserEntity => {
-    const request = ctx.switchToHttp().getRequest<Request>();
-
-    if (!request.user) {
-      throw new UnauthorizedException('User not found in request');
-    }
-
+  (data: unknown, ctx: ExecutionContext): User => {
+    const request = ctx.switchToHttp().getRequest<{ user: User }>();
     return request.user;
   },
 );

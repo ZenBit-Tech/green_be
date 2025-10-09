@@ -1,117 +1,55 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
-import { LoginDto } from './dto/login.dto';
-import { UserEntity } from './user.entity';
-import { AuthResponseDto } from './dto/auth-response.dto';
+import { User } from './user.entity';
 import { JwtPayload } from '../../types/jwt-payload.interface';
+import { UserMockRepository } from './repositories/user.mock-repository'; // ✅ Добавили
 
 /**
  * Authentication service
  * Provides JWT token management and authentication infrastructure
  * for all authentication methods (OAuth, Magic Link, etc.)
+ *
+ * NOTE: Currently using UserMockRepository for testing without database
+ * TODO: Replace with TypeORM Repository when database is configured
  */
 @Injectable()
 export class AuthService {
-  private readonly SALT_ROUNDS = 10;
-
   constructor(
-    @InjectRepository(UserEntity)
-    private readonly userRepo: Repository<UserEntity>,
+    private readonly userRepo: UserMockRepository, // ✅ Используем Mock
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
   /**
-   * Register a new user (TEMPORARY - for testing JWT infrastructure)
-   * TODO: Remove in production - users will authenticate via OAuth/Magic Link
-   * @param loginDto - User credentials
-   * @returns Authentication response with JWT tokens
-   * @throws ConflictException if username already exists
+   * Generate JWT access and refresh tokens
+   * Core method used by ALL authentication methods:
+   * - OAuth (Google, Facebook) will call this after user verification
+   * - Magic Link will call this after email verification
+   *
+   * @param user - User entity
+   * @returns Object with access and refresh tokens
    */
-  public async register(loginDto: LoginDto): Promise<AuthResponseDto> {
-    const existingUser = await this.userRepo.findOne({
-      where: { username: loginDto.username },
-    });
-
-    if (existingUser) {
-      throw new ConflictException('Username already exists');
-    }
-
-    const hashedPassword = await bcrypt.hash(
-      loginDto.password,
-      this.SALT_ROUNDS,
-    );
-
-    const user = this.userRepo.create({
-      username: loginDto.username,
-      password: hashedPassword,
-    });
-
-    const savedUser = await this.userRepo.save(user);
-
-    const tokens = await this.generateTokens(savedUser);
-
-    await this.userRepo.update(savedUser.id, {
-      refreshToken: tokens.refreshToken,
-    });
-
-    return {
-      user: {
-        id: savedUser.id,
-        username: savedUser.username,
-      },
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+  async generateTokens(
+    user: User,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
     };
-  }
 
-  /**
-   * Login existing user (TEMPORARY - for testing JWT infrastructure)
-   * TODO: Remove in production - users will authenticate via OAuth/Magic Link
-   * @param loginDto - User credentials
-   * @returns Authentication response with JWT tokens
-   * @throws UnauthorizedException if credentials are invalid
-   */
-  public async login(loginDto: LoginDto): Promise<AuthResponseDto> {
-    const user = await this.userRepo.findOne({
-      where: { username: loginDto.username },
-    });
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_EXPIRATION'),
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION'),
+      }),
+    ]);
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.password,
-    );
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const tokens = await this.generateTokens(user);
-
-    await this.userRepo.update(user.id, {
-      refreshToken: tokens.refreshToken,
-    });
-
-    return {
-      user: {
-        id: user.id,
-        username: user.username,
-      },
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    };
+    return { accessToken, refreshToken };
   }
 
   /**
@@ -121,7 +59,7 @@ export class AuthService {
    * @returns New access and refresh tokens
    * @throws UnauthorizedException if token is invalid or expired
    */
-  public async refresh(
+  async refresh(
     refreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     try {
@@ -129,9 +67,7 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
 
-      const user = await this.userRepo.findOne({
-        where: { id: payload.sub },
-      });
+      const user = await this.userRepo.findById(payload.sub); // ✅ Изменили на findById
 
       if (!user || !user.refreshToken) {
         throw new UnauthorizedException('Invalid refresh token');
@@ -163,74 +99,73 @@ export class AuthService {
    * @param userId - User ID to logout
    * @returns Success message
    */
-  public async logout(userId: string): Promise<{ message: string }> {
+  async logout(userId: string): Promise<{ message: string }> {
     await this.userRepo.update(userId, { refreshToken: null });
     return { message: 'Logged out successfully' };
   }
 
   /**
-   * Generate JWT access and refresh tokens
-   * Core method used by ALL authentication methods:
-   * - OAuth (Google, Facebook) will call this after user verification
-   * - Magic Link will call this after email verification
-   * - Traditional login (temporary) uses this
-   *
-   * @param user - User entity
-   * @returns Object with access and refresh tokens
+   * Find user by email
+   * Helper method for OAuth and Magic Link authentication
+   * @param email - User email
+   * @returns User entity or null
    */
-  public async generateTokens(
-    user: UserEntity,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    const payload: JwtPayload = {
-      sub: user.id,
-      username: user.username,
-    };
-
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_EXPIRATION'),
-      }),
-      this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION'),
-      }),
-    ]);
-
-    return { accessToken, refreshToken };
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepo.findByEmail(email);
   }
 
   /**
+   * Create new user
+   * Will be used by OAuth and Magic Link strategies
+   * @param userData - User data from authentication provider
+   * @returns Created user entity
+   */
+  async createUser(userData: Partial<User>): Promise<User> {
+    return this.userRepo.create(userData);
+  }
+
+  // ========================================
+  // FUTURE IMPLEMENTATIONS (Sprint 2+)
+  // ========================================
+
+  /**
    * Find or create user by OAuth provider
-   * Will be used by Google OAuth and Facebook OAuth strategies
+   * TODO: Implement in Sprint 2 when adding Google/Facebook OAuth
    *
-   * @param provider - OAuth provider name (google, facebook)
+   * @param provider - OAuth provider name (google, facebook, linkedin)
    * @param providerId - User ID from OAuth provider
    * @param email - User email from OAuth provider
    * @returns User entity
-   *
-   * TODO: Implement in Sprint 2 when adding OAuth
    */
-  // public async findOrCreateOAuthUser(
+  // async findOrCreateOAuthUser(
   //   provider: string,
   //   providerId: string,
   //   email: string,
-  // ): Promise<UserEntity> {
-  //   // Implementation for future OAuth integration
+  // ): Promise<User> {
+  //   let user = await this.userRepo.findByProvider(provider, providerId);
+  //
+  //   if (!user) {
+  //     user = await this.createUser({
+  //       email,
+  //       provider,
+  //       providerId,
+  //     });
+  //   }
+  //
+  //   return user;
   // }
 
   /**
    * Verify magic link token and authenticate user
-   * Will be used by Magic Link strategy (Den's task)
+   * TODO: Coordinate with Den on Magic Link implementation
    *
    * @param token - Magic link token from email
    * @returns Authentication response with JWT tokens
-   *
-   * TODO: Coordinate with Den on implementation
    */
-  // public async verifyMagicLink(
-  //   token: string,
-  // ): Promise<AuthResponseDto> {
-  //   // Implementation for magic link (Den's task)
+  // async verifyMagicLink(token: string): Promise<{
+  //   accessToken: string;
+  //   refreshToken: string;
+  // }> {
+  //   // Implementation by Den's team
   // }
 }

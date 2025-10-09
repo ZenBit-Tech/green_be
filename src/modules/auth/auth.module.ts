@@ -1,19 +1,30 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { TypeOrmModule } from '@nestjs/typeorm';
+// import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UserEntity } from './user.entity';
+// import { User } from './user.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { UserMockRepository } from './repositories/user.mock-repository';
 
+/**
+ * Authentication Module
+ * Provides JWT-based authentication infrastructure for the application
+ *
+ * Features:
+ * - JWT access and refresh token management
+ * - Global authentication guard with @Public() decorator support
+ * - Passport strategies for token validation
+ * - User entity and TypeORM integration
+ */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity]),
+    // TypeOrmModule.forFeature([User]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -21,7 +32,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN'),
+          expiresIn: configService.get<string>('JWT_EXPIRATION'), // ✅ Исправлено
         },
       }),
     }),
@@ -31,11 +42,12 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     AuthService,
     JwtStrategy,
     JwtRefreshStrategy,
+    UserMockRepository,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
   ],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule], // ✅ Экспортируй JwtModule для других модулей
 })
 export class AuthModule {}
