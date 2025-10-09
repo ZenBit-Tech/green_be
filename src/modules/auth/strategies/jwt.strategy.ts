@@ -1,23 +1,18 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { UserEntity } from '../user.entity';
+import { JwtPayload } from '../../../types/jwt-payload.interface';
+import { User } from '../user.entity'; // ✅ User
 
-export interface JwtPayload {
-  sub: string;
-  username: string;
-}
-
+/**
+ * JWT Access Token Strategy
+ * Validates access tokens and attaches user info to request
+ * Used by ALL authenticated routes
+ */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(
-    private configService: ConfigService,
-    @InjectRepository(UserEntity)
-    private userRepository: Repository<UserEntity>,
-  ) {
+  constructor(private readonly configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -25,15 +20,21 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<UserEntity> {
-    const user = await this.userRepository.findOne({
-      where: { id: payload.sub },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('User not found');
+  /**
+   * Validate JWT payload and return user object
+   * This user object will be attached to request as req.user
+   *
+   * @param payload - Decoded JWT payload
+   * @returns User object for request context
+   */
+  validate(payload: JwtPayload): User {
+    if (!payload.sub || !payload.email) {
+      throw new UnauthorizedException('Invalid token payload');
     }
 
-    return user;
+    return {
+      id: payload.sub,
+      email: payload.email,
+    } as User;
   }
 }

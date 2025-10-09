@@ -1,40 +1,42 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, ExtractJwt } from 'passport-jwt';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { UserEntity } from '../user.entity';
-import type { Request } from 'express';
-import type { JwtPayload } from './jwt.strategy';
+import { JwtPayload } from '../../../types/jwt-payload.interface';
 
+/**
+ * JWT Refresh Token Strategy
+ * Validates refresh tokens for token renewal
+ * Used by /auth/refresh endpoint
+ */
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
   Strategy,
   'jwt-refresh',
 ) {
-  constructor(
-    configService: ConfigService,
-    @InjectRepository(UserEntity)
-    private userRepository: Repository<UserEntity>,
-  ) {
+  constructor(configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_REFRESH_SECRET') || '',
-      passReqToCallback: true,
+      secretOrKey: configService.get<string>('JWT_REFRESH_SECRET'),
     });
   }
 
-  async validate(_req: Request, payload: JwtPayload): Promise<UserEntity> {
-    const user = await this.userRepository.findOne({
-      where: { id: payload.sub },
-    });
-
-    if (!user || !user.refreshToken) {
-      throw new UnauthorizedException('Invalid refresh token');
+  /**
+   * Validate JWT refresh token payload
+   * Called automatically by Passport after token verification
+   *
+   * @param payload - Decoded JWT payload
+   * @returns User object attached to request
+   */
+  validate(payload: JwtPayload) {
+    if (!payload.sub || !payload.email) {
+      throw new UnauthorizedException('Invalid token payload');
     }
 
-    return user;
+    return {
+      id: payload.sub,
+      email: payload.email,
+    };
   }
 }
