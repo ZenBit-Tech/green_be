@@ -6,7 +6,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { ROLES } from '@common/constants/app.constants';
 
 @Entity({ name: 'users' })
 export class UserEntity {
@@ -16,9 +15,6 @@ export class UserEntity {
   @Index({ unique: true })
   @Column()
   public email: string;
-
-  @Column({ default: ROLES.USER })
-  public role: string;
 
   @Column({ nullable: true })
   @Exclude()

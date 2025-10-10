@@ -57,25 +57,13 @@ export class AuthService {
           await manager.save(UserEntity, userFound);
         }
 
-        await manager
-          .createQueryBuilder()
-          .delete()
-          .from(MagicLinkTokenEntity)
-          .where('userId = :userId', { userId: userFound.id })
-          .execute();
+        const tokenEntity = manager.create(MagicLinkTokenEntity, {
+          token,
+          user: userFound,
+          expiresAt,
+        });
 
-        await manager
-          .createQueryBuilder()
-          .insert()
-          .into(MagicLinkTokenEntity)
-          .values({
-            token,
-            user: { id: userFound.id },
-            expiresAt,
-          })
-          .execute();
-
-        return userFound;
+        await manager.save(MagicLinkTokenEntity, tokenEntity);
       });
 
       const backendUrl = this.configService.get<string>('BACKEND_URL');
