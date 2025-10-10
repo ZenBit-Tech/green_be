@@ -5,102 +5,63 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
+  Get,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import {
-  ApiTags,
+  ApiBadRequestResponse,
+  ApiOkResponse,
   ApiOperation,
+  ApiTags,
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
+import { AuthService } from './auth.service';
+import { AuthResponseDto } from './dto/auth-response.dto';
+import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { UserEntity } from './user.entity';
+import { UserEntity } from './entities/user.entity';
 import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 
-/**
- * Authentication controller
- * Provides JWT token management endpoints for all authentication methods
- *
- * Current endpoints:
- * - register/login: TEMPORARY - for testing JWT infrastructure
- * - refresh: Used by ALL auth methods (OAuth, Magic Link)
- * - logout: Used by ALL auth methods
- *
- * Future OAuth endpoints (Sprint 2):
- * - GET /auth/google - Initiate Google OAuth
- * - GET /auth/google/callback - Google OAuth callback
- * - GET /auth/facebook - Initiate Facebook OAuth
- * - GET /auth/facebook/callback - Facebook OAuth callback
- */
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  public constructor(private readonly authService: AuthService) {}
 
-  /**
-   * Register a new user (TEMPORARY - for JWT infrastructure testing)
-   * TODO: Remove in production - users authenticate via OAuth/Magic Link
-   * @param loginDto - User credentials (username and password)
-   * @returns Authentication response with JWT tokens
-   */
   @Public()
-  @Post('register')
+  @Post('magic-link/request')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Register a new user (TEMPORARY - for testing)',
-    description:
-      'This endpoint is temporary and used only for testing JWT infrastructure. In production, users will authenticate via OAuth (Google, Facebook) or Magic Link.',
+  @ApiOperation({ summary: 'Request a magic link' })
+  @ApiOkResponse({
+    description: 'Magic link was successfully sent',
+    type: ResponseMagicLinkDto,
   })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'User successfully registered',
-    type: AuthResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
-    description: 'Username already exists',
-  })
-  public async register(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
-    return await this.authService.register(loginDto);
+  @ApiBadRequestResponse({ description: 'Invalid email' })
+  public async requestMagicLink(
+    @Body() dto: RequestMagicLinkDto,
+  ): Promise<ResponseMagicLinkDto> {
+    await this.authService.requestMagicLink(dto.email);
+    return { success: true };
   }
 
-  /**
-   * Login existing user (TEMPORARY - for JWT infrastructure testing)
-   * TODO: Remove in production - users authenticate via OAuth/Magic Link
-   * @param loginDto - User credentials (username and password)
-   * @returns Authentication response with JWT tokens
-   */
   @Public()
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Login user (TEMPORARY - for testing)',
-    description:
-      'This endpoint is temporary and used only for testing JWT infrastructure. In production, users will authenticate via OAuth (Google, Facebook) or Magic Link.',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User successfully logged in',
+  @Get('magic-link/consume')
+  @ApiOperation({ summary: 'Consume magic link token and get JWT' })
+  @ApiOkResponse({
+    description: 'Auth response (token + user)',
     type: AuthResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid credentials',
-  })
-  public async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
-    return await this.authService.login(loginDto);
+  @ApiBadRequestResponse({ description: 'Invalid or expired token' })
+  public async consumeMagicLink(
+    @Query('token') token: string,
+  ): Promise<AuthResponseDto> {
+    return this.authService.consumeMagicLink(token);
   }
 
-  /**
-   * Refresh access and refresh tokens
-   * Used by ALL authentication methods (OAuth, Magic Link, etc.)
-   * @param refreshTokenDto - Current refresh token
-   * @returns New access and refresh tokens
-   */
   @Public()
   @UseGuards(JwtRefreshAuthGuard)
   @Post('refresh')
@@ -130,13 +91,6 @@ export class AuthController {
     return await this.authService.refresh(refreshTokenDto.refreshToken);
   }
 
-  /**
-   * Logout current user
-   * Removes refresh token from database
-   * Used by ALL authentication methods
-   * @param user - Current authenticated user from JWT
-   * @returns Success message
-   */
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -163,26 +117,4 @@ export class AuthController {
   ): Promise<{ message: string }> {
     return await this.authService.logout(user.id);
   }
-
-  // Future OAuth endpoints (Sprint 2):
-
-  /**
-   * Initiate Google OAuth flow
-   * TODO: Implement in Sprint 2
-   */
-  // @Public()
-  // @Get('google')
-  // @UseGuards(GoogleOAuthGuard)
-  // async googleAuth() {}
-
-  /**
-   * Google OAuth callback
-   * TODO: Implement in Sprint 2
-   */
-  // @Public()
-  // @Get('google/callback')
-  // @UseGuards(GoogleOAuthGuard)
-  // async googleAuthCallback(@Req() req) {
-  //   return this.authService.generateTokens(req.user);
-  // }
 }

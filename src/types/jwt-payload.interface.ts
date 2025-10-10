@@ -9,11 +9,6 @@ export interface JwtPayload {
   sub: string;
 
   /**
-   * Username
-   */
-  username: string;
-
-  /**
    * Issued at timestamp (optional, added by JWT library)
    */
   iat?: number;

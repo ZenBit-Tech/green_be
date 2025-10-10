@@ -20,9 +20,11 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@/*": ["src/*"],
-      "@types/*": ["src/types/*"],
+      "@app-types/*": ["src/types/*"],
       "@modules/*": ["src/modules/*"],
       "@common/*": ["src/common/*"]
-    }
-  }
+    },
+  },
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
+  "include": ["src/**/*.ts"],
 }
