@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty } from 'class-validator';
 
-export class ParsedDataDto {
+export class ParsedFromFileDataDto {
   @IsString()
   @IsNotEmpty()
   fileName: string;

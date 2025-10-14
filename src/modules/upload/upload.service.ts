@@ -3,30 +3,30 @@ import {
   UPLOAD_MESSAGES,
   RANDOM_ID_MAX,
 } from '@common/constants/upload.constants';
-import { ParsedDataDto } from './dto/parsed-data.dto';
+import { ParsedFromFileDataDto } from './dto/parsed-data.dto';
 
-export interface StoredParsedData extends ParsedDataDto {
+export interface CachedParsedFromFileData extends ParsedFromFileDataDto {
   id: string;
   receivedAt: Date;
 }
 
-export interface AddParsedDataResponse {
+export interface CacheOperationResult {
   message: string;
   saved: boolean;
   id: string;
 }
 
-export interface ClearDataResponse {
+export interface ClearCachedDataResult {
   message: string;
 }
 
 @Injectable()
 export class UploadService {
-  private memoryStore: StoredParsedData[] = [];
+  private memoryStore: CachedParsedFromFileData[] = [];
 
-  addParsedData(payload: ParsedDataDto): AddParsedDataResponse {
+  addParsedData(payload: ParsedFromFileDataDto): CacheOperationResult {
     try {
-      const newRecord: StoredParsedData = {
+      const newRecord: CachedParsedFromFileData = {
         id: `${Date.now()}-${Math.floor(Math.random() * RANDOM_ID_MAX)}`,
         receivedAt: new Date(),
         ...payload,
@@ -44,11 +44,11 @@ export class UploadService {
     }
   }
 
-  getAllParsedData(): StoredParsedData[] {
+  getAllParsedData(): CachedParsedFromFileData[] {
     return this.memoryStore;
   }
 
-  clearAllData(): ClearDataResponse {
+  clearAllData(): ClearCachedDataResult {
     this.memoryStore = [];
     return { message: UPLOAD_MESSAGES.CLEARED };
   }

@@ -3,18 +3,19 @@ import { ApiTags, ApiResponse } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 import {
   UploadService,
-  StoredParsedData,
-  AddParsedDataResponse,
-  ClearDataResponse,
+  CachedParsedFromFileData,
+  CacheOperationResult,
+  ClearCachedDataResult,
 } from './upload.service';
-import { ParsedDataDto } from './dto/parsed-data.dto';
+import { ParsedFromFileDataDto } from './dto/parsed-data.dto';
 
 @ApiTags('Upload')
 @Controller('upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
-  @Public() // temporary until client api is ready
+  // TODO: Remove @Public once client API authentication is ready
+  @Public()
   @Post('parsed-data')
   @ApiResponse({
     status: 201,
@@ -24,17 +25,18 @@ export class UploadController {
     status: 500,
     description: 'Failed to store the parsed data due to a server error.',
   })
-  addParsedData(@Body() data: ParsedDataDto): AddParsedDataResponse {
+  addParsedData(@Body() data: ParsedFromFileDataDto): CacheOperationResult {
     return this.uploadService.addParsedData(data);
   }
 
-  @Public() // temporary until client api is ready
+  // TODO: Remove @Public once client API authentication is ready
+  @Public()
   @Get('parsed-data')
   @ApiResponse({
     status: 200,
     description: 'Returns all currently stored parsed data records.',
   })
-  getAllParsedData(): StoredParsedData[] {
+  getAllParsedData(): CachedParsedFromFileData[] {
     return this.uploadService.getAllParsedData();
   }
 
@@ -43,7 +45,7 @@ export class UploadController {
     status: 200,
     description: 'Successfully cleared all stored parsed data.',
   })
-  clearAllParsedData(): ClearDataResponse {
+  clearAllParsedData(): ClearCachedDataResult {
     return this.uploadService.clearAllData();
   }
 }
