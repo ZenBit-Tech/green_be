@@ -1,3 +1,52 @@
+## 🔐 OAuth Authentication
+
+### Supported Providers
+- ✅ Google OAuth 2.0
+- ✅ Facebook Login
+
+### Setup Instructions
+
+#### Prerequisites
+Copy `.env.example` to `.env` and fill in OAuth credentials.
+
+#### Google OAuth Setup
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create OAuth 2.0 Client ID
+3. Add redirect URI: `http://localhost:3000/api/auth/google/callback`
+4. Copy Client ID and Secret to `.env`
+
+#### Facebook Login Setup
+1. Go to [Facebook Developers](https://developers.facebook.com/)
+2. Create Consumer app
+3. Add Facebook Login product
+4. Set Valid OAuth Redirect URI: `http://localhost:3000/api/auth/facebook/callback`
+5. Copy App ID and Secret to `.env`
+
+### API Endpoints
+- `GET /api/auth/google` - Initiate Google OAuth flow
+- `GET /api/auth/google/callback` - Google OAuth callback
+- `GET /api/auth/facebook` - Initiate Facebook OAuth flow
+- `GET /api/auth/facebook/callback` - Facebook OAuth callback
+
+### Testing
+```bash
+npm run start:dev
+
+# Open in browser:
+http://localhost:3000/api/auth/google
+http://localhost:3000/api/auth/facebook
+```
+
+After successful login, user will be redirected to:
+```
+http://localhost:5173/auth/callback?access_token=...&refresh_token=...
+```
+
+
+
+
+
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>

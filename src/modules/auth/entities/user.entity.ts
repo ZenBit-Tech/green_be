@@ -4,6 +4,7 @@ import {
   Entity,
   Index,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 
@@ -16,13 +17,32 @@ export class UserEntity {
   @Column()
   public email: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'refresh_token', type: 'text', nullable: true })
   @Exclude()
-  refreshToken: string | null;
+  public refreshToken?: string | null;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  public createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  public updatedAt: Date;
+
+  // ========================================
+  // OAuth fields (added for OAuth authentication)
+  // ========================================
 
   @Column({ nullable: true })
   public provider?: string;
+
+  @Column({ nullable: true, name: 'provider_id' })
+  public providerId?: string;
+
+  @Column({ nullable: true, name: 'first_name' })
+  public firstName?: string;
+
+  @Column({ nullable: true, name: 'last_name' })
+  public lastName?: string;
+
+  @Column({ nullable: true })
+  public picture?: string;
 }
