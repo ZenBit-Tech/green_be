@@ -42,6 +42,9 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+# Database files
+lab_ai_dev.sqlite
+
 # temp directory
 .temp
 .tmp

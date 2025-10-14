@@ -7,6 +7,8 @@ import {
   HttpStatus,
   Query,
   Get,
+  Req,
+  Res,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -15,22 +17,35 @@ import {
   ApiTags,
   ApiResponse,
   ApiBearerAuth,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
+import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+
 import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
 import { AuthService } from './auth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { UserEntity } from './entities/user.entity';
 import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
+import { GoogleOAuthGuard } from './guards/google-oauth.guard';
+import { FacebookOAuthGuard } from './guards/facebook-oauth.guard';
+import { OAuthProfile } from '../../types/oauth-profile.interface';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  public constructor(private readonly authService: AuthService) {}
+  public constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  // ========================================
+  // Magic Link Authentication (Existing)
+  // ========================================
 
   @Public()
   @Post('magic-link/request')
@@ -61,6 +76,84 @@ export class AuthController {
   ): Promise<AuthResponseDto> {
     return this.authService.consumeMagicLink(token);
   }
+
+  // ========================================
+  // Google OAuth Authentication
+  // ========================================
+
+  @Public()
+  @Get('google')
+  @UseGuards(GoogleOAuthGuard)
+  @ApiOperation({
+    summary: 'Initiate Google OAuth login',
+    description: 'Redirects to Google OAuth consent screen',
+  })
+  @ApiExcludeEndpoint()
+  public async googleAuth(): Promise<void> {
+    // Guard automatically redirects to Google
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(GoogleOAuthGuard)
+  @ApiOperation({
+    summary: 'Google OAuth callback',
+    description:
+      'Handles Google OAuth callback and redirects to frontend with tokens',
+  })
+  @ApiExcludeEndpoint() // Hide from Swagger (redirects externally)
+  public async googleAuthRedirect(
+    @Req() req: Request & { user: OAuthProfile },
+    @Res() res: Response,
+  ): Promise<void> {
+    const tokens = await this.authService.handleOAuthLogin(req.user);
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+
+    res.redirect(
+      `${frontendUrl}/auth/callback?access_token=${tokens.accessToken}&refresh_token=${tokens.refreshToken}`,
+    );
+  }
+
+  // ========================================
+  // Facebook OAuth Authentication (New)
+  // ========================================
+
+  @Public()
+  @Get('facebook')
+  @UseGuards(FacebookOAuthGuard)
+  @ApiOperation({
+    summary: 'Initiate Facebook OAuth login',
+    description: 'Redirects to Facebook OAuth consent screen',
+  })
+  @ApiExcludeEndpoint() // Hide from Swagger (redirects externally)
+  public async facebookAuth(): Promise<void> {
+    // Guard automatically redirects to Facebook
+  }
+
+  @Public()
+  @Get('facebook/callback')
+  @UseGuards(FacebookOAuthGuard)
+  @ApiOperation({
+    summary: 'Facebook OAuth callback',
+    description:
+      'Handles Facebook OAuth callback and redirects to frontend with tokens',
+  })
+  @ApiExcludeEndpoint() // Hide from Swagger (redirects externally)
+  public async facebookAuthRedirect(
+    @Req() req: Request & { user: OAuthProfile },
+    @Res() res: Response,
+  ): Promise<void> {
+    const tokens = await this.authService.handleOAuthLogin(req.user);
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+
+    res.redirect(
+      `${frontendUrl}/auth/callback?access_token=${tokens.accessToken}&refresh_token=${tokens.refreshToken}`,
+    );
+  }
+
+  // ========================================
+  // Token Management (Existing)
+  // ========================================
 
   @Public()
   @UseGuards(JwtRefreshAuthGuard)

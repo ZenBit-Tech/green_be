@@ -11,6 +11,8 @@ import { UserEntity } from './entities/user.entity';
 import { MagicLinkTokenEntity } from './entities/magic-link-token.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { FacebookStrategy } from './strategies/facebook.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Module({
@@ -34,6 +36,8 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     EmailService,
     JwtStrategy,
     JwtRefreshStrategy,
+    GoogleStrategy,
+    FacebookStrategy,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
