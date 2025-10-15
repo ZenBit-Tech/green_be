@@ -25,8 +25,10 @@ export class UploadController {
     status: 500,
     description: 'Failed to store the parsed data due to a server error.',
   })
-  addParsedData(@Body() data: ParsedFromFileDataDto): CacheOperationResult {
-    return this.uploadService.addParsedData(data);
+  cacheParsedFromFileData(
+    @Body() data: ParsedFromFileDataDto,
+  ): CacheOperationResult {
+    return this.uploadService.cacheParsedFromFileData(data);
   }
 
   // TODO: Remove @Public once client API authentication is ready
@@ -36,8 +38,8 @@ export class UploadController {
     status: 200,
     description: 'Returns all currently stored parsed data records.',
   })
-  getAllParsedData(): CachedParsedFromFileData[] {
-    return this.uploadService.getAllParsedData();
+  getAllCachedFileData(): CachedParsedFromFileData[] {
+    return this.uploadService.getAllCachedFileData();
   }
 
   @Delete('parsed-data')
@@ -45,7 +47,7 @@ export class UploadController {
     status: 200,
     description: 'Successfully cleared all stored parsed data.',
   })
-  clearAllParsedData(): ClearCachedDataResult {
-    return this.uploadService.clearAllData();
+  clearCachedFileData(): ClearCachedDataResult {
+    return this.uploadService.clearCachedFileData();
   }
 }

@@ -24,7 +24,9 @@ export interface ClearCachedDataResult {
 export class UploadService {
   private memoryStore: CachedParsedFromFileData[] = [];
 
-  addParsedData(payload: ParsedFromFileDataDto): CacheOperationResult {
+  cacheParsedFromFileData(
+    payload: ParsedFromFileDataDto,
+  ): CacheOperationResult {
     try {
       const newRecord: CachedParsedFromFileData = {
         id: `${Date.now()}-${Math.floor(Math.random() * RANDOM_ID_MAX)}`,
@@ -44,11 +46,11 @@ export class UploadService {
     }
   }
 
-  getAllParsedData(): CachedParsedFromFileData[] {
+  getAllCachedFileData(): CachedParsedFromFileData[] {
     return this.memoryStore;
   }
 
-  clearAllData(): ClearCachedDataResult {
+  clearCachedFileData(): ClearCachedDataResult {
     this.memoryStore = [];
     return { message: UPLOAD_MESSAGES.CLEARED };
   }
