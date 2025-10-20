@@ -14,8 +14,6 @@ import { ParsedFromFileDataDto } from './dto/parsed-data.dto';
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
-  // TODO: Remove @Public once client API authentication is ready
-  @Public()
   @Post('parsed-data')
   @ApiResponse({
     status: 201,
@@ -31,7 +29,7 @@ export class UploadController {
     return this.uploadService.cacheParsedFromFileData(data);
   }
 
-  // TODO: Remove @Public once client API authentication is ready
+  // TODO: possible @Public removal after team decision on that functionality
   @Public()
   @Get('parsed-data')
   @ApiResponse({
@@ -42,6 +40,8 @@ export class UploadController {
     return this.uploadService.getAllCachedFileData();
   }
 
+  // TODO: possible @Public removal after team decision on that functionality
+  @Public()
   @Delete('parsed-data')
   @ApiResponse({
     status: 200,
