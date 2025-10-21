@@ -3,9 +3,14 @@ import {
   UPLOAD_MESSAGES,
   RANDOM_ID_MAX,
 } from '@common/constants/upload.constants';
-import { ParsedFromFileDataDto } from './dto/parsed-data.dto';
 
-export interface CachedParsedFromFileData extends ParsedFromFileDataDto {
+export interface ParsedFromFileDataPayload {
+  fileName: string;
+  fileType: string;
+  extractedText: string;
+}
+
+export interface CachedParsedFromFileData extends ParsedFromFileDataPayload {
   id: string;
   receivedAt: Date;
 }
@@ -25,7 +30,7 @@ export class UploadService {
   private memoryStore: CachedParsedFromFileData[] = [];
 
   cacheParsedFromFileData(
-    payload: ParsedFromFileDataDto,
+    payload: ParsedFromFileDataPayload,
   ): CacheOperationResult {
     try {
       const newRecord: CachedParsedFromFileData = {

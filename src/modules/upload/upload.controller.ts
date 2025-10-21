@@ -1,13 +1,13 @@
 import { Controller, Get, Post, Delete, Body } from '@nestjs/common';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
-import { Public } from '../auth/decorators/public.decorator';
+import { Public } from '@modules/auth/decorators/public.decorator';
 import {
   UploadService,
+  ParsedFromFileDataPayload,
   CachedParsedFromFileData,
   CacheOperationResult,
   ClearCachedDataResult,
 } from './upload.service';
-import { ParsedFromFileDataDto } from './dto/parsed-data.dto';
 
 @ApiTags('Upload')
 @Controller('upload')
@@ -24,7 +24,7 @@ export class UploadController {
     description: 'Failed to store the parsed data due to a server error.',
   })
   cacheParsedFromFileData(
-    @Body() data: ParsedFromFileDataDto,
+    @Body() data: ParsedFromFileDataPayload,
   ): CacheOperationResult {
     return this.uploadService.cacheParsedFromFileData(data);
   }
