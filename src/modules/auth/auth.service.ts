@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { EmailService } from '@common/services/email.service';
 import { JwtPayload } from '@app-types/jwt-payload.interface';
+import { OAuthProfile } from '@app-types/oauth-profile.interface';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
 import { MagicLinkTokenEntity } from './entities/magic-link-token.entity';
@@ -33,15 +34,18 @@ export class AuthService {
     private readonly jwtService: NestJwtService,
   ) {}
 
+  // ========================================
+  // Magic Link Authentication (Existing)
+  // ========================================
+
   public async requestMagicLink(
     emailAddress: string,
   ): Promise<ResponseMagicLinkDto> {
     try {
-      const token = uuidv4();
+      const token = String(uuidv4());
       const nowSeconds = Math.floor(Date.now() / 1000);
-      const expirySeconds = this.configService.get<number>(
-        'MAGIC_LINK_EXPIRY_SECONDS',
-      );
+      const expirySeconds =
+        this.configService.get<number>('MAGIC_LINK_EXPIRY_SECONDS') ?? 3600;
       const expiresAt = nowSeconds + expirySeconds;
 
       await this.dataSource.transaction(async (manager) => {
@@ -66,9 +70,12 @@ export class AuthService {
         await manager.save(MagicLinkTokenEntity, tokenEntity);
       });
 
-      const backendUrl = this.configService.get<string>('BACKEND_URL');
+      const backendUrl =
+        this.configService.get<string>('BACKEND_URL') ??
+        'http://localhost:3000';
       const link = `${backendUrl}/auth/magic-link/consume?token=${token}`;
-      const from = this.configService.get<string>('EMAIL_FROM');
+      const from =
+        this.configService.get<string>('EMAIL_FROM') ?? 'noreply@lab-ai.com';
 
       await this.emailService.sendMagicLink({
         to: emailAddress,
@@ -78,13 +85,18 @@ export class AuthService {
       });
 
       return { success: true };
-    } catch (err) {
-      this.logger.error('requestMagicLink failed', (err as Error).message);
+    } catch (error) {
+      this.logger.error(
+        'requestMagicLink failed',
+        (error as Error).message ?? 'Unknown error',
+      );
       throw new InternalServerErrorException(
         'Failed to process magic link request',
       );
     }
   }
+
+  // ============
 
   public async consumeMagicLink(token: string): Promise<AuthResponseDto> {
     try {
@@ -132,6 +144,100 @@ export class AuthService {
       throw err;
     }
   }
+
+  // ========================================
+  // OAuth Authentication
+  // ========================================
+
+  public async handleOAuthLogin(
+    profile: OAuthProfile,
+  ): Promise<AuthResponseDto> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      this.logger.log(
+        `OAuth login attempt for ${profile.email} via ${profile.provider}`,
+      );
+
+      // Find existing user
+      let user = await queryRunner.manager.findOne(UserEntity, {
+        where: { email: profile.email },
+      });
+
+      if (!user) {
+        this.logger.log(`Creating new user for ${profile.email}`);
+
+        // Create new user with OAuth data
+        user = queryRunner.manager.create(UserEntity, {
+          email: profile.email,
+          provider: profile.provider,
+          providerId: profile.providerId,
+          firstName: profile.firstName || null,
+          lastName: profile.lastName || null,
+          picture: profile.picture || null,
+        });
+
+        await queryRunner.manager.save(user);
+      } else {
+        this.logger.log(
+          `User ${profile.email} already exists, updating OAuth data`,
+        );
+
+        // Update existing user with OAuth data
+        await queryRunner.manager.update(UserEntity, user.id, {
+          provider: profile.provider,
+          providerId: profile.providerId,
+          firstName: profile.firstName || user.firstName,
+          lastName: profile.lastName || user.lastName,
+          picture: profile.picture || user.picture,
+        });
+
+        // Reload user after update
+        const updatedUser = await queryRunner.manager.findOne(UserEntity, {
+          where: { id: user.id },
+        });
+
+        if (!updatedUser) {
+          throw new NotFoundException('User not found after update');
+        }
+
+        user = updatedUser;
+      }
+
+      // Generate JWT tokens
+      const tokens = await this.generateTokens(user);
+
+      // Save refresh token
+      await queryRunner.manager.update(UserEntity, user.id, {
+        refreshToken: tokens.refreshToken,
+      });
+
+      await queryRunner.commitTransaction();
+
+      const expiresIn = this.configService.get<number>(
+        'JWT_EXPIRES_IN_SECONDS',
+      );
+
+      return {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn,
+        user: user,
+      };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error('handleOAuthLogin failed', (err as Error).message);
+      throw new InternalServerErrorException('OAuth login failed');
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // ========================================
+  // Token Management (Existing)
+  // ========================================
 
   public async refresh(
     refreshToken: string,
@@ -183,13 +289,11 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_EXPIRES_IN_SECONDS'),
+        expiresIn: `${this.configService.get<number>('JWT_EXPIRES_IN_SECONDS')}s`,
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.get<string>(
-          'JWT_REFRESH_EXPIRES_IN_SECONDS',
-        ),
+        expiresIn: `${this.configService.get<number>('JWT_REFRESH_EXPIRES_IN_SECONDS')}s`,
       }),
     ]);
 
