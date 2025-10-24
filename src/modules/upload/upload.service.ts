@@ -53,18 +53,23 @@ export class UploadService {
     try {
       let analysis: FileAnalysis = {};
 
-      if (payload.extractedText && payload.extractedText.length > 0) {
-        const bloodMarkerAnalysis =
-          await this.langChainService.analyzeBloodMarkers(
-            payload.extractedText,
-          );
-
-        analysis = {
-          hasBloodMarkers: bloodMarkerAnalysis.toLowerCase().includes('yes'),
-          bloodMarkersSummary: bloodMarkerAnalysis,
-          analysisPerformedAt: new Date(),
-        };
+      if (!payload.extractedText || payload.extractedText.trim().length === 0) {
+        throw new InternalServerErrorException(UPLOAD_MESSAGES.NO_TEXT);
       }
+
+      if (payload.extractedText.length > 50000) {
+        throw new InternalServerErrorException(UPLOAD_MESSAGES.TOO_LARGE);
+      }
+
+      this.clearCachedFileData();
+      const bloodMarkerAnalysis =
+        await this.langChainService.analyzeBloodMarkers(payload.extractedText);
+
+      analysis = {
+        hasBloodMarkers: bloodMarkerAnalysis.toLowerCase().includes('yes'),
+        bloodMarkersSummary: bloodMarkerAnalysis,
+        analysisPerformedAt: new Date(),
+      };
 
       const newRecord: CachedParsedFromFileData = {
         id: `${Date.now()}-${Math.floor(Math.random() * RANDOM_ID_MAX)}`,

@@ -7,8 +7,13 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiResponse, ApiOperation } from '@nestjs/swagger';
-import { Public } from '@modules/auth/decorators/public.decorator';
+import {
+  ApiTags,
+  ApiResponse,
+  ApiOperation,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import {
   UploadService,
   ParsedFromFileDataPayload,
@@ -23,6 +28,8 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post('parsed-data')
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 3, ttl: 60 } })
   @ApiResponse({
     status: 201,
     description: 'The parsed data has been successfully stored.',
@@ -37,9 +44,8 @@ export class UploadController {
     return await this.uploadService.cacheParsedFromFileData(data);
   }
 
-  // TODO: possible @Public removal after team decision on that functionality
-  @Public()
   @Get('parsed-data')
+  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: 'Returns all currently stored parsed data records.',
@@ -48,9 +54,8 @@ export class UploadController {
     return this.uploadService.getAllCachedFileData();
   }
 
-  // TODO: possible @Public removal after team decision on that functionality
-  @Public()
   @Delete('parsed-data')
+  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: 'Successfully cleared all stored parsed data.',
@@ -59,8 +64,8 @@ export class UploadController {
     return this.uploadService.clearCachedFileData();
   }
 
-  @Public()
   @Get('parsed-data/:id/query')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Query a specific document using natural language' })
   async queryDocument(
     @Param('id') id: string,
@@ -72,8 +77,8 @@ export class UploadController {
     return { answer };
   }
 
-  @Public()
   @Get('analysis/blood-markers')
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Analyze all cached data for blood marker information',
   })
