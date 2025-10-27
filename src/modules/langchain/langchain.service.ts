@@ -1,14 +1,21 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-var-requires */
+
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { StringOutputParser } from '@langchain/core/output_parsers';
-import { PromptTemplate } from '@langchain/core/prompts';
 import { ChatOpenAI } from '@langchain/openai';
 import { LANGCHAIN_ERROR_MESSAGES } from '@/common/constants/langchain.constants.';
+
+const { StringOutputParser } = require('@langchain/core/output_parsers');
+const { PromptTemplate } = require('@langchain/core/prompts');
 
 @Injectable()
 export class LangChainService {
   private readonly llm: ChatOpenAI;
-  private readonly outputParser: StringOutputParser;
+  private readonly outputParser: any;
   private readonly logger = new Logger(LangChainService.name);
 
   constructor(private readonly configService: ConfigService) {
@@ -68,8 +75,8 @@ export class LangChainService {
 
       const chain = prompt.pipe(this.llm).pipe(this.outputParser);
 
-      const result = await chain.invoke({ text });
-      return result;
+      const result: any = await chain.invoke({ text });
+      return String(result);
     } catch (error: unknown) {
       const err = error as Error;
       this.logger.error('Error analyzing blood markers', err.stack);
@@ -98,8 +105,8 @@ export class LangChainService {
 
       const chain = prompt.pipe(this.llm).pipe(this.outputParser);
 
-      const result = await chain.invoke({ text, query });
-      return result;
+      const result: any = await chain.invoke({ text, query });
+      return String(result);
     } catch (error: unknown) {
       const err = error as Error;
       this.logger.error('Error processing custom query', err.stack);

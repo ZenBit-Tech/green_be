@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Query,
   Get,
+  Res,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -16,21 +17,30 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
 import { AuthService } from './auth.service';
+import { OAuthProfile } from '@app-types/oauth-profile.interface';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { UserEntity } from './entities/user.entity';
 import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
+import { GoogleOAuthGuard } from './guards/google-oauth.guard';
+import { LinkedInOAuthGuard } from './guards/linkedin-oauth.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  public constructor(private readonly authService: AuthService) {}
+  public constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  // ==================== Magic Link ====================
 
   @Public()
   @Post('magic-link/request')
@@ -61,6 +71,76 @@ export class AuthController {
   ): Promise<AuthResponseDto> {
     return this.authService.consumeMagicLink(token);
   }
+
+  // ==================== Google OAuth ====================
+
+  @Public()
+  @Get('google')
+  @UseGuards(GoogleOAuthGuard)
+  @ApiOperation({ summary: 'Initiate Google OAuth flow' })
+  @ApiResponse({
+    status: HttpStatus.FOUND,
+    description: 'Redirects to Google authorization page',
+  })
+  public async googleAuth(): Promise<void> {
+    // Guard automatically redirects to Google
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(GoogleOAuthGuard)
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  @ApiResponse({
+    status: HttpStatus.FOUND,
+    description: 'Redirects to frontend with tokens',
+  })
+  public async googleAuthCallback(
+    @CurrentUser() profile: OAuthProfile,
+    @Res() res: Response,
+  ): Promise<void> {
+    const authResponse = await this.authService.handleOAuthLogin(profile);
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const redirectUrl = `${frontendUrl}/auth/callback?access_token=${authResponse.accessToken}&refresh_token=${authResponse.refreshToken}`;
+
+    res.redirect(redirectUrl);
+  }
+
+  // ==================== LinkedIn OAuth ====================
+
+  @Public()
+  @Get('linkedin')
+  @UseGuards(LinkedInOAuthGuard)
+  @ApiOperation({ summary: 'Initiate LinkedIn OAuth flow' })
+  @ApiResponse({
+    status: HttpStatus.FOUND,
+    description: 'Redirects to LinkedIn authorization page',
+  })
+  public async linkedinAuth(): Promise<void> {
+    // Guard automatically redirects to LinkedIn
+  }
+
+  @Public()
+  @Get('linkedin/callback')
+  @UseGuards(LinkedInOAuthGuard)
+  @ApiOperation({ summary: 'LinkedIn OAuth callback' })
+  @ApiResponse({
+    status: HttpStatus.FOUND,
+    description: 'Redirects to frontend with tokens',
+  })
+  public async linkedinAuthCallback(
+    @CurrentUser() profile: OAuthProfile,
+    @Res() res: Response,
+  ): Promise<void> {
+    const authResponse = await this.authService.handleOAuthLogin(profile);
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const redirectUrl = `${frontendUrl}/auth/callback?access_token=${authResponse.accessToken}&refresh_token=${authResponse.refreshToken}`;
+
+    res.redirect(redirectUrl);
+  }
+
+  // ==================== Token Management ====================
 
   @Public()
   @UseGuards(JwtRefreshAuthGuard)
