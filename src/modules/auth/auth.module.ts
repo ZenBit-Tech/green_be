@@ -26,7 +26,7 @@ import { EmailService } from '../../common/services/email.service';
         return {
           secret: configService.getOrThrow<string>('JWT_SECRET'),
           signOptions: {
-            expiresIn, // 👈 Передаём как number (в секундах)
+            expiresIn,
           },
         };
       },

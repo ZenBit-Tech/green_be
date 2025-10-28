@@ -3,4 +3,4 @@ dist/
 *.js
 scripts/
 src/modules/auth/strategies/
-typeorm.config.ts
+typeorm.config.tssrc/modules/langchain/**
