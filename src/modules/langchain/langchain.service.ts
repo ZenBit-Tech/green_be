@@ -1,29 +1,37 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { StringOutputParser } from '@langchain/core/output_parsers';
+import {
+  JsonOutputParser,
+  StringOutputParser,
+} from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
-import { ChatOpenAI } from '@langchain/openai';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { LANGCHAIN_ERROR_MESSAGES } from '@/common/constants/langchain.constants.';
-
+import { ResponseAnalysisDto } from '@/modules/analysis/dto/analysis-response.dto';
+import { RequestAnalysisDto } from '@/modules/analysis/dto/analysis-request.dto';
+import { MedicalDataCheck } from '@/modules/upload/upload.service';
+import { BLOOD_MARKER_ANALYSIS_PROMPT } from './prompts/blood-marker.prompt';
+import { CHECK_MARKER_ANALYSIS_PROMPT } from './prompts/check-marker.prompt';
+import { FULL_BLOOD_ANALYSIS_PROMPT } from './prompts/full-analysis.prompt';
 @Injectable()
 export class LangChainService {
-  private readonly llm: ChatOpenAI;
+  private readonly llm: ChatGoogleGenerativeAI;
   private readonly outputParser: StringOutputParser;
   private readonly logger = new Logger(LangChainService.name);
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
-    if (!apiKey) {
+    const geminiApiKey = this.configService.get<string>('GEMINI_API_KEY');
+    if (!geminiApiKey) {
       this.logger.error(LANGCHAIN_ERROR_MESSAGES.MISSING_API_KEY);
       throw new Error(LANGCHAIN_ERROR_MESSAGES.MISSING_API_KEY);
     }
 
     try {
-      this.llm = new ChatOpenAI({
-        openAIApiKey: apiKey,
-        modelName: 'gpt-4',
+      this.llm = new ChatGoogleGenerativeAI({
+        apiKey: geminiApiKey,
+        model: 'gemini-2.5-flash-lite',
         temperature: 0.1,
-        timeout: 30000,
+        maxOutputTokens: 30000,
       });
       this.outputParser = new StringOutputParser();
     } catch (error: unknown) {
@@ -35,46 +43,45 @@ export class LangChainService {
     }
   }
 
-  async analyzeBloodMarkers(text: string): Promise<string> {
-    try {
-      if (!text?.trim()) {
-        return LANGCHAIN_ERROR_MESSAGES.NO_TEXT_PROVIDED;
-      }
+  async checkBloodMarkers(text: string): Promise<MedicalDataCheck> {
+    const parser = new JsonOutputParser<MedicalDataCheck>();
 
-      const prompt = PromptTemplate.fromTemplate(`
-        Analyze the following medical text and determine if it contains information about blood markers.
-        Focus on identifying mentions of common blood tests like:
-        - Complete Blood Count (CBC) components
-        - Lipid panel (cholesterol, triglycerides)
-        - Liver function tests (ALT, AST, ALP)
-        - Kidney function tests (creatinine, BUN)
-        - Thyroid markers (TSH, T3, T4)
-        - Blood glucose and HbA1c
-        - Inflammatory markers (CRP, ESR)
-        - Vitamin levels
-        - Electrolytes
-        - Any other blood-based biomarkers
+    const chain = CHECK_MARKER_ANALYSIS_PROMPT.pipe(this.llm).pipe(parser);
 
-        Text to analyze:
-        {text}
+    const result = await chain.invoke({
+      text,
+    });
 
-        Please provide a concise response indicating:
-        1. Whether blood marker information is present (YES/NO)
-        2. A brief summary of what blood markers were mentioned
-        3. Any notable values or ranges if provided
+    return result;
+  }
 
-        Format your response clearly.
-      `);
+  async analyzeBloodMarkers(text: string): Promise<RequestAnalysisDto> {
+    const parser = new JsonOutputParser<RequestAnalysisDto>();
 
-      const chain = prompt.pipe(this.llm).pipe(this.outputParser);
+    const chain = BLOOD_MARKER_ANALYSIS_PROMPT.pipe(this.llm).pipe(parser);
 
-      const result = await chain.invoke({ text });
-      return result;
-    } catch (error: unknown) {
-      const err = error as Error;
-      this.logger.error('Error analyzing blood markers', err.stack);
-      return LANGCHAIN_ERROR_MESSAGES.ANALYZE_FAILED;
-    }
+    const result = await chain.invoke({
+      text,
+    });
+
+    return result;
+  }
+
+  async generateFullAnalysis(
+    payload: RequestAnalysisDto,
+  ): Promise<ResponseAnalysisDto> {
+    const { age, gender, markers, comment, selectedOptions } = payload;
+
+    const parser = new JsonOutputParser<ResponseAnalysisDto>();
+
+    const chain = FULL_BLOOD_ANALYSIS_PROMPT.pipe(this.llm).pipe(parser);
+    return await chain.invoke({
+      age,
+      gender,
+      markers: markers,
+      comment: comment || LANGCHAIN_ERROR_MESSAGES.NO_TEXT_PROVIDED,
+      options: selectedOptions || LANGCHAIN_ERROR_MESSAGES.NO_OPTIONS_SELECTED,
+    });
   }
 
   async customQuery(text: string, query: string): Promise<string> {

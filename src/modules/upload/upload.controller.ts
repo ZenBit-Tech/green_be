@@ -13,7 +13,6 @@ import {
   ApiOperation,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
 import {
   UploadService,
   ParsedFromFileDataPayload,
@@ -29,7 +28,6 @@ export class UploadController {
 
   @Post('parsed-data')
   @ApiBearerAuth()
-  @Throttle({ default: { limit: 3, ttl: 60 } })
   @ApiResponse({
     status: 201,
     description: 'The parsed data has been successfully stored.',
@@ -75,14 +73,5 @@ export class UploadController {
     const answer = await this.uploadService.queryCachedData(id, query);
 
     return { answer };
-  }
-
-  @Get('analysis/blood-markers')
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Analyze all cached data for blood marker information',
-  })
-  analyzeBloodMarkers() {
-    return this.uploadService.analyzeAllForBloodMarkers();
   }
 }
