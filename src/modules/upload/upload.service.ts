@@ -84,12 +84,17 @@ export class UploadService {
   }
 
   async queryCachedData(id: string, query: string): Promise<string> {
-    const record = this.memoryStore.find((item) => item.id === id);
-
-    if (!record) {
-      throw new Error(UPLOAD_MESSAGES.NOT_FOUND);
+    try {
+      const record = this.memoryStore.find((item) => item.id === id);
+      if (!record) {
+        throw new Error(UPLOAD_MESSAGES.NOT_FOUND);
+      }
+      return await this.langChainService.customQuery(
+        record.extractedText,
+        query,
+      );
+    } catch (error) {
+      throw new InternalServerErrorException(UPLOAD_MESSAGES.FAILED, error);
     }
-
-    return await this.langChainService.customQuery(record.extractedText, query);
   }
 }
