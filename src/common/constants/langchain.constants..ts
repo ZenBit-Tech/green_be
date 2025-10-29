@@ -8,4 +8,5 @@ export const LANGCHAIN_ERROR_MESSAGES = {
   NO_TEXT_PROVIDED: 'NO: No text provided for analysis.',
   NO_QUERY_PROVIDED: 'No query provided. Please specify a question.',
   NO_TEXT_FOR_QUERY: 'No text provided to analyze.',
+  NO_OPTIONS_SELECTED: 'No options selected.',
 };

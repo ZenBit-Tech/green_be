@@ -76,13 +76,4 @@ export class UploadController {
 
     return { answer };
   }
-
-  @Get('analysis/blood-markers')
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Analyze all cached data for blood marker information',
-  })
-  analyzeBloodMarkers() {
-    return this.uploadService.analyzeAllForBloodMarkers();
-  }
 }
