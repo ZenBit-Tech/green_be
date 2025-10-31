@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
-// import { UploadModule } from './modules/upload/upload.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { AnalysisModule } from './modules/analysis/analysis.module';
 import { HealthModule } from './modules/health/health.module';
 import { envValidationSchema } from './config/env.validation';
 
@@ -47,7 +48,8 @@ import { envValidationSchema } from './config/env.validation';
     }),
     AuthModule,
     HealthModule,
-    // UploadModule,
+    UploadModule,
+    AnalysisModule,
   ],
 })
 export class AppModule {}
