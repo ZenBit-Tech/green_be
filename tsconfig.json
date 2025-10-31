@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "NodeNext",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -20,7 +20,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "strict": true,
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "paths": {
       "@app/*": ["src/*"],
       "@common/*": ["src/common/*"],
@@ -29,5 +29,5 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*.ts","typeorm.config.ts"]
+  "include": ["src/**/*.ts", "typeorm.config.ts"]
 }
