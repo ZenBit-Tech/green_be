@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -13,6 +17,7 @@ import { MedicalDataCheck } from '@/modules/upload/upload.service';
 import { BLOOD_MARKER_ANALYSIS_PROMPT } from './prompts/blood-marker.prompt';
 import { CHECK_MARKER_ANALYSIS_PROMPT } from './prompts/check-marker.prompt';
 import { FULL_BLOOD_ANALYSIS_PROMPT } from './prompts/full-analysis.prompt';
+
 @Injectable()
 export class LangChainService {
   private readonly llm: ChatGoogleGenerativeAI;
@@ -96,17 +101,17 @@ export class LangChainService {
 
       const prompt = PromptTemplate.fromTemplate(`
         Based on the following text, answer this question: {query}
-        
+
         Text: {text}
-        
+
         Please provide a clear, concise answer based only on the information in the text.
         If the text doesn't contain relevant information, state that clearly.
       `);
 
       const chain = prompt.pipe(this.llm).pipe(this.outputParser);
 
-      const result = await chain.invoke({ text, query });
-      return result;
+      const result: any = await chain.invoke({ text, query });
+      return String(result);
     } catch (error: unknown) {
       const err = error as Error;
       this.logger.error('Error processing custom query', err.stack);

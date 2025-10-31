@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "module": "NodeNext",
-    "moduleResolution": "NodeNext",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -12,19 +11,23 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
+    "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "moduleResolution": "NodeNext",
     "paths": {
-      "@/*": ["src/*"],
-      "@app-types/*": ["src/types/*"],
+      "@app/*": ["src/*"],
+      "@common/*": ["src/common/*"],
       "@modules/*": ["src/modules/*"],
-      "@common/*": ["src/common/*"]
+      "@app-types/*": ["src/types/*"],
+      "@/*": ["src/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "typeorm.config.ts"]
 }

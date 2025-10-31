@@ -1,32 +1,37 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-import { EmailService } from '@common/services/email.service';
-import { AuthService } from './auth.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 import { UserEntity } from './entities/user.entity';
 import { MagicLinkTokenEntity } from './entities/magic-link-token.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { LinkedInStrategy } from './strategies/linkedin.strategy';
+import { EmailService } from '../../common/services/email.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity, MagicLinkTokenEntity]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN_SECONDS'),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const expiresIn = configService.getOrThrow<number>(
+          'JWT_EXPIRES_IN_SECONDS',
+        );
+        return {
+          secret: configService.getOrThrow<string>('JWT_SECRET'),
+          signOptions: {
+            expiresIn,
+          },
+        };
+      },
     }),
+    TypeOrmModule.forFeature([UserEntity, MagicLinkTokenEntity]),
   ],
   controllers: [AuthController],
   providers: [
@@ -34,10 +39,8 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     EmailService,
     JwtStrategy,
     JwtRefreshStrategy,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
+    GoogleStrategy,
+    LinkedInStrategy,
   ],
   exports: [AuthService],
 })
