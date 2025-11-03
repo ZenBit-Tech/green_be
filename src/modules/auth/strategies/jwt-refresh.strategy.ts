@@ -2,7 +2,20 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { JwtPayload } from '../../../types/jwt-payload.interface';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import type { Request } from 'express';
+import type { JwtPayload } from '@app-types/jwt-payload.interface';
+import { UserEntity } from '../entities/user.entity';
+
+/**
+ * Request body for refresh token endpoint
+ */
+interface RefreshTokenRequest extends Request {
+  body: {
+    refreshToken: string;
+  };
+}
 
 /**
  * JWT Refresh Token Strategy
@@ -14,11 +27,16 @@ export class JwtRefreshStrategy extends PassportStrategy(
   Strategy,
   'jwt-refresh',
 ) {
-  constructor(configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_REFRESH_SECRET'),
+      passReqToCallback: true,
     });
   }
 
@@ -26,17 +44,27 @@ export class JwtRefreshStrategy extends PassportStrategy(
    * Validate JWT refresh token payload
    * Called automatically by Passport after token verification
    *
+   * @param req - Express request object
    * @param payload - Decoded JWT payload
-   * @returns User object attached to request
+   * @returns User entity from database
    */
-  validate(payload: JwtPayload) {
-    if (!payload.sub || !payload.email) {
-      throw new UnauthorizedException('Invalid token payload');
+  async validate(
+    req: RefreshTokenRequest,
+    payload: JwtPayload,
+  ): Promise<UserEntity> {
+    const refreshToken = req.body.refreshToken;
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token not found');
     }
 
-    return {
-      id: payload.sub,
-      email: payload.email,
-    };
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+    });
+
+    if (!user || user.refreshToken !== refreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return user;
   }
 }

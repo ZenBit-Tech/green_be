@@ -1,9 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { JwtPayload } from '../../../types/jwt-payload.interface';
-import { User } from '../user.entity'; // ✅ User
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { JwtPayload } from '@app-types/jwt-payload.interface';
+import { UserEntity } from '../entities/user.entity';
 
 /**
  * JWT Access Token Strategy
@@ -12,7 +14,11 @@ import { User } from '../user.entity'; // ✅ User
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -25,16 +31,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    * This user object will be attached to request as req.user
    *
    * @param payload - Decoded JWT payload
-   * @returns User object for request context
+   * @returns User entity from database
    */
-  validate(payload: JwtPayload): User {
-    if (!payload.sub || !payload.email) {
-      throw new UnauthorizedException('Invalid token payload');
+  async validate(payload: JwtPayload): Promise<UserEntity> {
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+    });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
-
-    return {
-      id: payload.sub,
-      email: payload.email,
-    } as User;
+    return user;
   }
 }

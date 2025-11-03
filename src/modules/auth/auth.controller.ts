@@ -1,25 +1,67 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Post,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  Query,
+  Get,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { User } from './user.entity';
+import { UserEntity } from './entities/user.entity';
 import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 
-@ApiTags('auth')
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  public constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @Post('login')
-  @ApiOperation({ summary: 'User login' })
-  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.login(loginDto);
+  @Post('magic-link/request')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Request a magic link' })
+  @ApiOkResponse({
+    description: 'Magic link was successfully sent',
+    type: ResponseMagicLinkDto,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid email' })
+  public async requestMagicLink(
+    @Body() dto: RequestMagicLinkDto,
+  ): Promise<ResponseMagicLinkDto> {
+    // TODO: Fix after resolving AuthService conflicts
+    await this.authService.requestMagicLink(dto.email);
+    return { success: true };
+  }
+
+  @Public()
+  @Get('magic-link/consume')
+  @ApiOperation({ summary: 'Consume magic link token and get JWT' })
+  @ApiOkResponse({
+    description: 'Auth response (token + user)',
+    type: AuthResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid or expired token' })
+  public async consumeMagicLink(
+    @Query('token') token: string,
+  ): Promise<AuthResponseDto> {
+    // TODO: Fix after resolving AuthService conflicts
+    return await this.authService.consumeMagicLink(token);
   }
 
   @Public()
@@ -35,14 +77,14 @@ export class AuthController {
   @Post('logout')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'User logout' })
-  async logout(@CurrentUser() user: User): Promise<{ message: string }> {
+  async logout(@CurrentUser() user: UserEntity): Promise<{ message: string }> {
     return this.authService.logout(user.id);
   }
 
   @Get('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
-  getProfile(@CurrentUser() user: User): UserResponseDto {
+  getProfile(@CurrentUser() user: UserEntity): UserResponseDto {
     return new UserResponseDto(user);
   }
 }

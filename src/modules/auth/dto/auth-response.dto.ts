@@ -8,6 +8,12 @@ export class AuthResponseDto {
   @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   refreshToken: string;
 
+  @ApiProperty({
+    example: 3600,
+    description: 'Token expiration time in seconds',
+  })
+  expiresIn: number;
+
   @ApiProperty({ type: UserResponseDto })
   user: UserResponseDto;
 }
