@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from '@modules/auth/auth.module';
 import { HealthModule } from '@modules/health/health.module';
 import { AnalysisModule } from '@modules/analysis/analysis.module';
@@ -18,27 +19,38 @@ import { envValidationSchema } from '@/config/env.validation';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const dbType = config.getOrThrow<string>('DB_TYPE');
+      useFactory: (config: ConfigService): TypeOrmModuleOptions => {
+        const dbType = config.get<string>('DB_TYPE', 'better-sqlite3');
 
-        if (dbType !== 'mysql') {
-          throw new Error('Only MySQL database is supported');
+        // SQLite for development
+        if (dbType === 'better-sqlite3') {
+          return {
+            type: 'better-sqlite3',
+            database: config.get<string>('DB_DATABASE', './lab_ai_dev.sqlite'),
+            autoLoadEntities: true,
+            synchronize: true,
+          };
         }
 
+        // MySQL for production
         return {
           type: 'mysql',
-          host: config.getOrThrow<string>('DB_HOST'),
-          port: config.getOrThrow<number>('DB_PORT'),
-          username: config.getOrThrow<string>('DB_USERNAME'),
-          password: config.getOrThrow<string>('DB_PASSWORD'),
-          database: config.getOrThrow<string>('DB_DATABASE'),
-          entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
-          synchronize: false,
-          logging: config.get<string>('NODE_ENV') === 'development',
+          host: config.get<string>('DB_HOST'),
+          port: config.get<number>('DB_PORT'),
+          username: config.get<string>('DB_USER'),
+          password: config.get<string>('DB_PASS'),
+          database: config.get<string>('DB_NAME'),
+          autoLoadEntities: true,
+          synchronize: true,
         };
       },
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
     AuthModule,
     HealthModule,
     AnalysisModule,

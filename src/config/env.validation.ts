@@ -7,12 +7,38 @@ export const envValidationSchema = Joi.object({
     .valid('development', 'production', 'test')
     .default('development'),
 
-  DB_TYPE: Joi.string().valid('mysql').required(),
-  DB_HOST: Joi.string().required(),
-  DB_PORT: Joi.number().required(),
-  DB_USERNAME: Joi.string().required(),
-  DB_PASSWORD: Joi.string().required(),
-  DB_DATABASE: Joi.string().required(),
+  // Database - flexible for MySQL or SQLite
+  DB_TYPE: Joi.string().valid('mysql', 'better-sqlite3').required(),
+  DB_HOST: Joi.string().when('DB_TYPE', {
+    is: 'mysql',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+  DB_PORT: Joi.number().when('DB_TYPE', {
+    is: 'mysql',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+  DB_USER: Joi.string().when('DB_TYPE', {
+    is: 'mysql',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+  DB_PASS: Joi.string().when('DB_TYPE', {
+    is: 'mysql',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+  DB_NAME: Joi.string().when('DB_TYPE', {
+    is: 'mysql',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+  DB_DATABASE: Joi.string().when('DB_TYPE', {
+    is: 'better-sqlite3',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
 
   JWT_SECRET: Joi.string().required(),
   JWT_EXPIRES_IN_SECONDS: Joi.number().required(),

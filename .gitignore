@@ -1,19 +1,19 @@
 # compiled output
 /dist
-/node_modules
+/node_modules    
 /build
 
 # Logs
 logs
 *.log
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
+npm-debug.log*   
+pnpm-debug.log*  
+yarn-debug.log*  
+yarn-error.log*  
+lerna-debug.log* 
 
 # OS
-.DS_Store
+.DS_Store        
 
 # Tests
 /coverage
@@ -44,6 +44,7 @@ lerna-debug.log*
 
 # Database files
 lab_ai_dev.sqlite
+*.sqlite
 
 # temp directory
 .temp
@@ -57,5 +58,7 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# TypeORM
 typeorm-ts-node-commonjs
 sleep

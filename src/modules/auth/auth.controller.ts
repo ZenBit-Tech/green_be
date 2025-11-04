@@ -14,8 +14,8 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiResponse,
   ApiBearerAuth,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +25,7 @@ import { OAuthProfile } from '@app-types/oauth-profile.interface';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { ResponseMagicLinkDto } from './dto/response-magic-link.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { UserEntity } from './entities/user.entity';
@@ -67,7 +68,7 @@ export class AuthController {
   public async consumeMagicLink(
     @Query('token') token: string,
   ): Promise<AuthResponseDto> {
-    return this.authService.consumeMagicLink(token);
+    return await this.authService.consumeMagicLink(token);
   }
 
   @Public()
@@ -137,56 +138,24 @@ export class AuthController {
   @Public()
   @UseGuards(JwtRefreshAuthGuard)
   @Post('refresh')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Refresh access token',
-    description:
-      'Generates new access and refresh tokens. Works for all authentication methods.',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Tokens successfully refreshed',
-    schema: {
-      properties: {
-        accessToken: { type: 'string' },
-        refreshToken: { type: 'string' },
-      },
-    },
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid or expired refresh token',
-  })
-  public async refresh(
-    @Body() refreshTokenDto: RefreshTokenDto,
+  @ApiOperation({ summary: 'Refresh access token' })
+  async refresh(
+    @Body() dto: RefreshTokenDto,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    return await this.authService.refresh(refreshTokenDto.refreshToken);
+    return this.authService.refresh(dto.refreshToken);
   }
 
   @Post('logout')
-  @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Logout user',
-    description:
-      'Logs out user by removing refresh token. Works for all authentication methods.',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User successfully logged out',
-    schema: {
-      properties: {
-        message: { type: 'string', example: 'Logged out successfully' },
-      },
-    },
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized',
-  })
-  public async logout(
-    @CurrentUser() user: UserEntity,
-  ): Promise<{ message: string }> {
-    return await this.authService.logout(user.id);
+  @ApiOperation({ summary: 'User logout' })
+  async logout(@CurrentUser() user: UserEntity): Promise<{ message: string }> {
+    return this.authService.logout(user.id);
+  }
+
+  @Get('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  getProfile(@CurrentUser() user: UserEntity): UserResponseDto {
+    return new UserResponseDto(user);
   }
 }
