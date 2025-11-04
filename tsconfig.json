@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "NodeNext",
+    "module": "Node16",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -20,7 +20,8 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "strict": true,
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "Node16",
+    "types": ["node"],
     "paths": {
       "@app/*": ["src/*"],
       "@common/*": ["src/common/*"],

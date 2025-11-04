@@ -6,4 +6,10 @@ export class UserResponseDto {
 
   @ApiProperty({ example: 'alice@example.com' })
   public email: string;
+
+  @ApiProperty({
+    example: 'google',
+    enum: ['magic_link', 'google', 'linkedin'],
+  })
+  public provider: 'magic_link' | 'google' | 'linkedin';
 }

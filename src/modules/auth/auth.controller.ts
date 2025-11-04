@@ -40,8 +40,6 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
-  // ==================== Magic Link ====================
-
   @Public()
   @Post('magic-link/request')
   @HttpCode(HttpStatus.CREATED)
@@ -71,8 +69,6 @@ export class AuthController {
   ): Promise<AuthResponseDto> {
     return this.authService.consumeMagicLink(token);
   }
-
-  // ==================== Google OAuth ====================
 
   @Public()
   @Get('google')
@@ -106,8 +102,6 @@ export class AuthController {
     res.redirect(redirectUrl);
   }
 
-  // ==================== LinkedIn OAuth ====================
-
   @Public()
   @Get('linkedin')
   @UseGuards(LinkedInOAuthGuard)
@@ -139,8 +133,6 @@ export class AuthController {
 
     res.redirect(redirectUrl);
   }
-
-  // ==================== Token Management ====================
 
   @Public()
   @UseGuards(JwtRefreshAuthGuard)

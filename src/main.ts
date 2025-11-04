@@ -1,74 +1,61 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import session from 'express-session';
 import { AppModule } from './app.module';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import session from 'express-session';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const config = app.get(ConfigService);
+  const logger = new Logger('Bootstrap');
 
-  // Global prefix
-  app.setGlobalPrefix('api');
-
-  // Validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      forbidNonWhitelisted: true,
       transform: true,
     }),
   );
 
-  // CORS
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true,
-  });
-
-  // Session support (for LinkedIn OpenID Connect)
   app.use(
     session({
-      secret:
-        process.env.SESSION_SECRET ||
-        'your-session-secret-change-in-production',
+      secret: config.getOrThrow<string>('SESSION_SECRET'),
       resave: false,
       saveUninitialized: false,
       cookie: {
-        maxAge: parseInt(process.env.SESSION_MAX_AGE || '600000', 10), // Default: 10 minutes
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
+        secure: config.get<string>('NODE_ENV') === 'production',
+        maxAge: 3600000,
       },
     }),
   );
 
-  // Swagger documentation
-  const config = new DocumentBuilder()
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('Lab AI Blood Test Analyzer API')
-    .setDescription(
-      'API documentation for OAuth authentication and blood test analysis',
-    )
+    .setDescription('API documentation for Lab AI healthcare platform')
     .setVersion('1.0')
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      name: 'Authorization',
-      description: 'Enter JWT token',
-      in: 'header',
-    })
-    .addTag(
-      'Authentication',
-      'OAuth 2.0 (Google, LinkedIn) and Magic Link authentication',
-    )
+    .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
+  app.enableCors({
+    origin: config.getOrThrow<string>('FRONTEND_URL'),
+    credentials: true,
+  });
+
+  app.setGlobalPrefix('api');
+
+  const port = config.get<number>('PORT') || 3000;
+  const host = config.get<string>('HOST') || 'localhost';
+
   await app.listen(port);
 
-  console.log(`🚀 Application is running on: ${await app.getUrl()}`);
-  console.log(`📚 Swagger docs available at: ${await app.getUrl()}/api/docs`);
+  logger.log(`Application is running on: http://${host}:${port}`);
+  logger.log(`Swagger docs available at: http://${host}:${port}/api/docs`);
+  logger.log(`Health check available at: http://${host}:${port}/api/health`);
 }
 
 void bootstrap();
