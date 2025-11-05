@@ -16,6 +16,7 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 import { OAuthProfile } from '@app-types/oauth-profile.interface';
 import { JwtPayload } from '@app-types/jwt-payload.interface';
 import { EmailService } from '@common/services/email.service';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -74,11 +75,7 @@ export class AuthService {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         expiresIn,
-        user: {
-          id: user.id,
-          email: user.email,
-          provider: user.provider,
-        },
+        user: new UserResponseDto(user),
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -173,11 +170,7 @@ export class AuthService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       expiresIn,
-      user: {
-        id: user.id,
-        email: user.email,
-        provider: user.provider,
-      },
+      user: new UserResponseDto(user),
     };
   }
 

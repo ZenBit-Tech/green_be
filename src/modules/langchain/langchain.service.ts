@@ -100,18 +100,18 @@ export class LangChainService {
       }
 
       const prompt = PromptTemplate.fromTemplate(`
-        Based on the following text, answer this question: {query}
+      Based on the following text, answer this question: {query}
 
-        Text: {text}
+      Text: {text}
 
-        Please provide a clear, concise answer based only on the information in the text.
-        If the text doesn't contain relevant information, state that clearly.
-      `);
+      Please provide a clear, concise answer based only on the information in the text.
+      If the text doesn't contain relevant information, state that clearly.
+    `);
 
       const chain = prompt.pipe(this.llm).pipe(this.outputParser);
 
-      const result: any = await chain.invoke({ text, query });
-      return String(result);
+      const result: string = await chain.invoke({ text, query });
+      return result;
     } catch (error: unknown) {
       const err = error as Error;
       this.logger.error('Error processing custom query', err.stack);
