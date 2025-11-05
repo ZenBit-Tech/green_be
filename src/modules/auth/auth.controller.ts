@@ -79,9 +79,7 @@ export class AuthController {
     status: HttpStatus.FOUND,
     description: 'Redirects to Google authorization page',
   })
-  public async googleAuth(): Promise<void> {
-    // Guard automatically redirects to Google
-  }
+  public async googleAuth(): Promise<void> {}
 
   @Public()
   @Get('google/callback')
@@ -111,9 +109,7 @@ export class AuthController {
     status: HttpStatus.FOUND,
     description: 'Redirects to LinkedIn authorization page',
   })
-  public async linkedinAuth(): Promise<void> {
-    // Guard automatically redirects to LinkedIn
-  }
+  public async linkedinAuth(): Promise<void> {}
 
   @Public()
   @Get('linkedin/callback')
