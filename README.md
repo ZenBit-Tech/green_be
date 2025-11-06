@@ -60,7 +60,7 @@ After successful authentication, user will be redirected to:
 Currently using MySQL for development.
 
 #### Database
-Currently using **SQLite** for development, **MySQL** ready for production.
+**MySQL** ready for production.
 
 **Development:**
 - SQLite database: `./lab_ai_dev.sqlite`

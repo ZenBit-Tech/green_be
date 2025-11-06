@@ -41,10 +41,11 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+.env.docker.local
 
 # Database files
-lab_ai_dev.sqlite
-*.sqlite
+
+*.db
 
 # temp directory
 .temp
