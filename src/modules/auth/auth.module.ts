@@ -3,15 +3,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { UserEntity } from './entities/user.entity';
-import { MagicLinkTokenEntity } from './entities/magic-link-token.entity';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { GoogleStrategy } from './strategies/google.strategy';
-import { LinkedInStrategy } from './strategies/linkedin.strategy';
+import { AuthService } from '@modules/auth/auth.service';
+import { AuthController } from '@modules/auth/auth.controller';
+import { UserEntity } from '@modules/auth/entities/user.entity';
+import { MagicLinkTokenEntity } from '@modules/auth/entities/magic-link-token.entity';
+import { GoogleStrategy } from '@modules/auth/strategies/google.strategy';
+import { LinkedInStrategy } from '@modules/auth/strategies/linkedin.strategy';
+import { JwtStrategy } from '@modules/auth/strategies/jwt.strategy';
+import { JwtRefreshStrategy } from '@modules/auth/strategies/jwt-refresh.strategy';
+import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { EmailService } from '@common/services/email.service';
 
 /**
