@@ -48,14 +48,13 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  const port = config.get<number>('PORT') || 3000;
-  const host = config.get<string>('HOST') || 'localhost';
+  const port = config.get<number>('PORT');
 
   await app.listen(port);
 
-  logger.log(`Application is running on: http://${host}:${port}`);
-  logger.log(`Swagger docs available at: http://${host}:${port}/api/docs`);
-  logger.log(`Health check available at: http://${host}:${port}/api/health`);
+  logger.log(`Application is running on: http://localhost:${port}`);
+  logger.log(`Swagger docs available at: http://localhost:${port}/api/docs`);
+  logger.log(`Health check available at: http://localhost:${port}/api/health`);
 }
 
 void bootstrap();

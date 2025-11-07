@@ -48,12 +48,7 @@ export class AuthService {
 
       if (!user) {
         user = queryRunner.manager.create(UserEntity, {
-          email: profile.email,
-          provider: profile.provider,
-          providerId: profile.providerId,
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          picture: profile.picture,
+          ...profile,
         });
       } else {
         user.firstName = profile.firstName || user.firstName;
@@ -67,20 +62,18 @@ export class AuthService {
 
       await queryRunner.commitTransaction();
 
-      const expiresIn = this.configService.getOrThrow<number>(
-        'JWT_EXPIRES_IN_SECONDS',
-      );
-
       return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        expiresIn,
+        expiresIn: this.configService.getOrThrow<number>(
+          'JWT_EXPIRES_IN_SECONDS',
+        ),
         user: new UserResponseDto(user),
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error(
-        `OAuth login failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `OAuth login failed for ${profile.email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       throw error;
     } finally {
