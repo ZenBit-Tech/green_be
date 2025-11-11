@@ -21,7 +21,7 @@
     "prepare": "husky",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "npm run typeorm -- migration:generate -d src/config/typeorm.config.ts",
-    "migration:run": "npm run typeorm -- migration:run -d dist/config/typeorm.config.js",
+    "migration:run": "npm run typeorm -- migration:run -d src/config/typeorm.config.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/config/typeorm.config.ts",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
@@ -30,7 +30,7 @@
     "docker:restart": "docker-compose restart app",
     "docker:dev": "docker-compose --profile dev up -d",
     "docker:clean": "docker-compose down -v",
-    "heroku-postbuild": "npm run build && npm run migration:run"
+    "heroku-postbuild": "npm run build"
   },
   "dependencies": {
     "@langchain/core": "^1.0.1",
