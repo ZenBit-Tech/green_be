@@ -20,7 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepare": "husky",
     "typeorm": "typeorm-ts-node-commonjs",
-    "migration:generate": "npm run typeorm -- migration:generate -d src/config/typeorm.config.ts",
+    "migration:generate": "npm run typeorm -- migration:generate src/database/migrations/CreateMigration -d src/config/typeorm.config.ts",
     "migration:run": "npm run typeorm -- migration:run -d src/config/typeorm.config.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/config/typeorm.config.ts",
     "docker:build": "docker-compose build",
@@ -30,7 +30,7 @@
     "docker:restart": "docker-compose restart app",
     "docker:dev": "docker-compose --profile dev up -d",
     "docker:clean": "docker-compose down -v",
-    "heroku-postbuild": "npm run build"
+    "heroku-postbuild": "npm run build && npm run migration:run"
   },
   "dependencies": {
     "@langchain/core": "^1.0.1",

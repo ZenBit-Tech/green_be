@@ -30,7 +30,7 @@ import { envValidationSchema } from '@/config/env.validation';
         password: config.get<string>('DB_PASS'),
         database: config.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false,
       }),
     }),
 
