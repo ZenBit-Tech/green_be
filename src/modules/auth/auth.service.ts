@@ -115,8 +115,8 @@ export class AuthService {
 
       await this.tokenRepository.save(magicLinkToken);
 
-      const backendUrl = this.configService.getOrThrow<string>('BACKEND_URL');
-      const magicLink = `${backendUrl}/auth/magic-link/consume?token=${token}`;
+      const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
+      const magicLink = `${frontendUrl}/auth/magic-link/consume?token=${token}`;
       const emailFrom = this.configService.getOrThrow<string>('EMAIL_FROM');
 
       await this.emailService.sendMagicLink({
