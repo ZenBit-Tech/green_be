@@ -33,27 +33,44 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
+  /**
+   * Handle OAuth login (Google, LinkedIn)
+   * If user exists (by email) - update their data and provider info
+   * If user doesn't exist - create new user
+   *
+   * @param profile - OAuth profile from provider
+   * @returns Authentication response with tokens
+   */
   async handleOAuthLogin(profile: OAuthProfile): Promise<AuthResponseDto> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      // Find user by email only (ignore provider)
       let user = await queryRunner.manager.findOne(UserEntity, {
-        where: [
-          { email: profile.email, provider: profile.provider },
-          { providerId: profile.providerId, provider: profile.provider },
-        ],
+        where: { email: profile.email },
       });
 
       if (!user) {
+        // Create new user
         user = queryRunner.manager.create(UserEntity, {
           ...profile,
         });
+        this.logger.log(
+          `New user created via ${profile.provider}: ${profile.email}`,
+        );
       } else {
+        // Update existing user with new provider info
+        user.provider = profile.provider;
+        user.providerId = profile.providerId;
         user.firstName = profile.firstName || user.firstName;
         user.lastName = profile.lastName || user.lastName;
         user.picture = profile.picture || user.picture;
+
+        this.logger.log(
+          `Existing user logged in via ${profile.provider}: ${profile.email} (previous provider: ${user.provider})`,
+        );
       }
 
       const tokens = this.generateTokens(user);
@@ -125,6 +142,8 @@ export class AuthService {
         link: magicLink,
         expiresInSeconds: expirySeconds,
       });
+
+      this.logger.log(`Magic link sent to ${email}`);
     } catch (error) {
       this.logger.error(
         `Failed to send magic link: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -159,6 +178,8 @@ export class AuthService {
       'JWT_EXPIRES_IN_SECONDS',
     );
 
+    this.logger.log(`User ${user.email} logged in via magic link`);
+
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -187,6 +208,8 @@ export class AuthService {
       user.refreshToken = tokens.refreshToken;
       await this.userRepository.save(user);
 
+      this.logger.log(`Tokens refreshed for user ${user.email}`);
+
       return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
@@ -199,19 +222,60 @@ export class AuthService {
     }
   }
 
+  /**
+   * User logout
+   * Removes refresh token and all magic link tokens
+   * Uses database transaction for atomicity
+   *
+   * @param userId - User ID to logout
+   * @returns Success message
+   */
   async logout(userId: string): Promise<{ message: string }> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-    });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+    try {
+      const user = await queryRunner.manager.findOne(UserEntity, {
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Remove refresh token
+      user.refreshToken = null;
+      await queryRunner.manager.save(user);
+
+      // Remove all magic link tokens for this user
+      const deleteResult = await queryRunner.manager.delete(
+        MagicLinkTokenEntity,
+        {
+          user: { id: userId },
+        },
+      );
+
+      await queryRunner.commitTransaction();
+
+      // Safely access affected property
+      const tokensDeleted =
+        typeof deleteResult.affected === 'number' ? deleteResult.affected : 0;
+
+      this.logger.log(
+        `User ${userId} (${user.email}) logged out successfully. Deleted ${tokensDeleted} magic link token(s).`,
+      );
+
+      return { message: 'Logged out successfully' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(
+        `Logout failed for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    user.refreshToken = null;
-    await this.userRepository.save(user);
-
-    return { message: 'Logged out successfully' };
   }
 
   private generateTokens(user: UserEntity): {
@@ -220,6 +284,7 @@ export class AuthService {
   } {
     const payload: JwtPayload = {
       sub: user.id,
+      email: user.email,
     };
 
     const accessToken = this.jwtService.sign(payload, {
