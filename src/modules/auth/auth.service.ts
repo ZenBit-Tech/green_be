@@ -33,27 +33,17 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-  /**
-   * Handle OAuth login (Google, LinkedIn)
-   * If user exists (by email) - update their data and provider info
-   * If user doesn't exist - create new user
-   *
-   * @param profile - OAuth profile from provider
-   * @returns Authentication response with tokens
-   */
   async handleOAuthLogin(profile: OAuthProfile): Promise<AuthResponseDto> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // Find user by email only (ignore provider)
       let user = await queryRunner.manager.findOne(UserEntity, {
         where: { email: profile.email },
       });
 
       if (!user) {
-        // Create new user
         user = queryRunner.manager.create(UserEntity, {
           ...profile,
         });
@@ -61,7 +51,6 @@ export class AuthService {
           `New user created via ${profile.provider}: ${profile.email}`,
         );
       } else {
-        // Update existing user with new provider info
         user.provider = profile.provider;
         user.providerId = profile.providerId;
         user.firstName = profile.firstName || user.firstName;
@@ -222,14 +211,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * User logout
-   * Removes refresh token and all magic link tokens
-   * Uses database transaction for atomicity
-   *
-   * @param userId - User ID to logout
-   * @returns Success message
-   */
   async logout(userId: string): Promise<{ message: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -244,11 +225,9 @@ export class AuthService {
         throw new NotFoundException('User not found');
       }
 
-      // Remove refresh token
       user.refreshToken = null;
       await queryRunner.manager.save(user);
 
-      // Remove all magic link tokens for this user
       const deleteResult = await queryRunner.manager.delete(
         MagicLinkTokenEntity,
         {
@@ -258,7 +237,6 @@ export class AuthService {
 
       await queryRunner.commitTransaction();
 
-      // Safely access affected property
       const tokensDeleted =
         typeof deleteResult.affected === 'number' ? deleteResult.affected : 0;
 
