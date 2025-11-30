@@ -30,7 +30,7 @@
     "docker:restart": "docker-compose restart app",
     "docker:dev": "docker-compose --profile dev up -d",
     "docker:clean": "docker-compose down -v",
-    "heroku-postbuild": "npm run build && npm run migration:run"
+    "heroku-postbuild": "npm run build"
   },
   "dependencies": {
     "@langchain/core": "^1.0.1",

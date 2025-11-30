@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class CreateMigration1762969707650 implements MigrationInterface {
-    name = 'CreateMigration1762969707650'
+export class CreateMigration1764516395317 implements MigrationInterface {
+    name = 'CreateMigration1764516395317'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`DROP INDEX \`IDX_97672ac88f789774dd47f7c8be\` ON \`users\``);
