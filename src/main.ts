@@ -49,6 +49,7 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://localhost:5173',
     'https://green-frontend-bbac1a42fc92.herokuapp.com',
+    'https://lab-ai-mobile-test.vercel.app',
   ];
 
   if (frontendUrl && !allowedOrigins.includes(frontendUrl)) {
