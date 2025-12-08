@@ -6,7 +6,7 @@ export const envValidationSchema = Joi.object({
     .default('development'),
   PORT: Joi.number().default(3000),
 
-  DB_TYPE: Joi.string().valid('mysql').required(),
+  DB_TYPE: Joi.string().valid('mysql').default('mysql').required(),
   DB_HOST: Joi.string().required(),
   DB_PORT: Joi.number().default(3306),
   DB_USER: Joi.string().required(),
@@ -42,7 +42,6 @@ export const envValidationSchema = Joi.object({
   ALLOWED_ORIGINS: Joi.string()
     .required()
     .custom((value: unknown, helpers) => {
-      // Type guard: ensure value is string
       if (typeof value !== 'string') {
         return helpers.error('string.base');
       }
@@ -75,6 +74,5 @@ export const envValidationSchema = Joi.object({
       'any.invalid': 'ALLOWED_ORIGINS must be comma-separated valid URIs',
     }),
 
-  // AI
   GEMINI_API_KEY: Joi.string().required(),
 });
